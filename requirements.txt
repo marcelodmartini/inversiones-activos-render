@@ -25,4 +25,4 @@ matplotlib
 plotly
 playwright
 
-openai
+openai>=1.0.0

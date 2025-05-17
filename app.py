@@ -22,7 +22,6 @@ import openai
 from config import OPENAI_API_KEY  # ✅ Tomamos la API key desde config.py
 
 log_info("La app inició correctamente")
-log_error("Error de conexión con la API externa")
 
 if "debug_logs" not in st.session_state:
     st.session_state.debug_logs = []
@@ -40,8 +39,9 @@ with col2:
 
 uploaded_file = st.file_uploader("Cargar archivo CSV", type=["csv"])
 
-# Asignar clave a OpenAI
-openai.api_key = OPENAI_API_KEY
+
+# Crear cliente OpenAI con la nueva API
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 st.header("💬 Chat con IA Financiera (OpenAI)")
 
@@ -51,16 +51,16 @@ if st.button("Consultar IA"):
     if prompt.strip() != "":
         with st.spinner("Consultando a ChatGPT..."):
             try:
-                response = openai.ChatCompletion.create(
+                response = client.chat.completions.create(
                     model="gpt-4",  # o "gpt-3.5-turbo"
                     messages=[
                         {"role": "system", "content": "Sos un experto en inversiones, finanzas y análisis bursátil."},
                         {"role": "user", "content": prompt}
                     ],
-                    temperature=0.7
+                    temperature=0.7,
                 )
                 st.markdown("**Respuesta:**")
-                st.write(response["choices"][0]["message"]["content"])
+                st.write(response.choices[0].message.content)
             except Exception as e:
                 st.error(f"Error al contactar a OpenAI: {e}")
 

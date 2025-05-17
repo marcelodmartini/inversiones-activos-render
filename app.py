@@ -37,6 +37,36 @@ with col2:
     fecha_fin = st.date_input("Fecha de fin", value=datetime.today())
 
 uploaded_file = st.file_uploader("Cargar archivo CSV", type=["csv"])
+
+import openai
+import streamlit as st
+import os
+
+# Cargar clave desde secrets o env
+openai.api_key = st.secrets["openai"]["api_key"] if "openai" in st.secrets else os.getenv("OPENAI_API_KEY")
+
+st.header("💬 Chat con IA Financiera (OpenAI)")
+
+prompt = st.text_area("Escribí tu consulta para ChatGPT", "")
+
+if st.button("Consultar IA"):
+    if prompt.strip() != "":
+        with st.spinner("Consultando a ChatGPT..."):
+            try:
+                response = openai.ChatCompletion.create(
+                    model="gpt-4",  # o "gpt-3.5-turbo" si preferís menor costo
+                    messages=[
+                        {"role": "system", "content": "Sos un experto en inversiones, finanzas y análisis bursátil."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.7
+                )
+                st.markdown("**Respuesta:**")
+                st.write(response["choices"][0]["message"]["content"])
+            except Exception as e:
+                st.error(f"Error al contactar a OpenAI: {e}")
+
+
 cg = CoinGeckoAPI()
 
 errores_conexion = []

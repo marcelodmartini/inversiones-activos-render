@@ -1,0 +1,24 @@
+# Ignorar claves y configuraciones sensibles
+.env
+.streamlit/secrets.toml
+
+# Archivos de configuración de entorno
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos temporales
+*.log
+*.csv
+*.xlsx
+*.bak
+
+# Entornos virtuales
+.venv/
+env/
+venv/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db

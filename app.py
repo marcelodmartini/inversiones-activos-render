@@ -17,7 +17,10 @@ from config import ES_CLOUD, ALPHA_VANTAGE_API_KEY
 from helpers.byma import obtener_precio_bono_byma
 import subprocess
 import os
+from logger import log_info, log_error
 
+log_info("La app inició correctamente")
+log_error("Error de conexión con la API externa")
 
 if "debug_logs" not in st.session_state:
     st.session_state.debug_logs = []

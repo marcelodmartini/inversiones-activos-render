@@ -18,6 +18,8 @@ from helpers.byma import obtener_precio_bono_byma
 import subprocess
 import os
 from helpers.logger import log_info, log_error
+import openai
+from config import OPENAI_API_KEY  # ✅ Tomamos la API key desde config.py
 
 log_info("La app inició correctamente")
 log_error("Error de conexión con la API externa")
@@ -38,12 +40,8 @@ with col2:
 
 uploaded_file = st.file_uploader("Cargar archivo CSV", type=["csv"])
 
-import openai
-import streamlit as st
-import os
-
-# Cargar clave desde secrets o env
-openai.api_key = st.secrets["openai"]["api_key"] if "openai" in st.secrets else os.getenv("OPENAI_API_KEY")
+# Asignar clave a OpenAI
+openai.api_key = OPENAI_API_KEY
 
 st.header("💬 Chat con IA Financiera (OpenAI)")
 
@@ -54,7 +52,7 @@ if st.button("Consultar IA"):
         with st.spinner("Consultando a ChatGPT..."):
             try:
                 response = openai.ChatCompletion.create(
-                    model="gpt-4",  # o "gpt-3.5-turbo" si preferís menor costo
+                    model="gpt-4",  # o "gpt-3.5-turbo"
                     messages=[
                         {"role": "system", "content": "Sos un experto en inversiones, finanzas y análisis bursátil."},
                         {"role": "user", "content": prompt}

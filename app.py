@@ -41,7 +41,7 @@ uploaded_file = st.file_uploader("Cargar archivo CSV", type=["csv"])
 
 
 # Crear cliente OpenAI con la nueva API
-client = OpenAI(api_key=OPENAI_API_KEY)
+client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 st.header("💬 Chat con IA Financiera (OpenAI)")
 

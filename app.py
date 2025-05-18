@@ -45,22 +45,39 @@ client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 st.header("💬 Chat con IA Financiera (OpenAI)")
 
-prompt = st.text_area("Escribí tu consulta para ChatGPT", "")
+prompt = st.text_area("Escribí tu consulta para ChatGPT", placeholder="Ej: ¿Conviene invertir en bonos ajustados por CER o en acciones de empresas energéticas argentinas?")
 
 if st.button("Consultar IA"):
     if prompt.strip() != "":
         with st.spinner("Consultando a ChatGPT..."):
             try:
-                response = client.chat.completions.create(
-                    model="gpt-4",  # o "gpt-3.5-turbo"
-                    messages=[
-                        {"role": "system", "content": "Sos un experto en inversiones, finanzas y análisis bursátil."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.7,
+                # Mensaje de sistema mejorado (estilo ChatGPT Pro)
+                system_prompt = (
+                    "Actuá como un asesor financiero profesional con experiencia en análisis bursátil, macroeconomía "
+                    "y estrategias de inversión a corto, mediano y largo plazo. "
+                    "Tu objetivo es brindar respuestas claras, detalladas y bien estructuradas, incluyendo pros y contras, "
+                    "riesgos, ejemplos reales y recomendaciones si aplica. "
+                    "Usá listas, tablas y analogías cuando sea útil. Si falta información, pedí precisión al usuario."
                 )
+
+                # Contexto estilo diálogo inicial
+                messages = [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": "Hola, quiero hacerte una consulta de inversión financiera."},
+                    {"role": "assistant", "content": "Hola, encantado de ayudarte. ¿Qué activo, estrategia o análisis querés consultar?"},
+                    {"role": "user", "content": prompt}
+                ]
+
+                response = client.chat.completions.create(
+                    model="gpt-4",  # podés usar "gpt-3.5-turbo" si querés reducir costos
+                    messages=messages,
+                    temperature=0.7,
+                    max_tokens=1500,
+                )
+
                 st.markdown("**Respuesta:**")
                 st.write(response.choices[0].message.content)
+
             except Exception as e:
                 st.error(f"Error al contactar a OpenAI: {e}")
 

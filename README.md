@@ -98,28 +98,62 @@ Un indicador compuesto que sintetiza la salud financiera del activo. Se calcula 
 | 1/5    | Débil     | Mala calidad financiera
 
 ### 🎯 Fórmula de cálculo:
-Por cada condición cumplida se suma 1 punto (máx 10 puntos):
+📊 ¿Qué es este proyecto?
+Este módulo evalúa el potencial de crecimiento de activos financieros (acciones o bonos), asignando un Score Final del 1 al 5 basado en:
 
-- ✅ Beta ≤ 1
-- ✅ Debt/Equity < 1
-- ✅ EV/EBITDA < 15
-- ✅ ROE > 10%
-- ✅ ROIC > 8%
-- ✅ PEG Ratio < 1.5
-- ✅ FCF Yield > 5%
-- ✅ P/E Ratio < 20
-- ✅ P/B Ratio < 3
-- ✅ Dividend Yield > 2%
+Indicadores financieros clave.
 
-Luego:
-- **9–10 puntos → 5/5**
-- **7–8 → 4/5**
-- **5–6 → 3/5**
-- **3–4 → 2/5**
-- **0–2 → 1/5**
+Potencial de suba.
+
+Riesgo relativo.
+
+Condiciones del contexto económico global.
+
+🧠 ¿Qué mide el Score?
+El sistema devuelve un Score entre 1 y 5 estrellas:
+
+Score	Etiqueta	Significado
+⭐	Débil	Alto riesgo, bajos fundamentos
+⭐⭐	Riesgoso	Fundamentos débiles
+⭐⭐⭐	Aceptable	Balanceado pero no sobresaliente
+⭐⭐⭐⭐	Muy Bueno	Gran potencial, buena relación R/B
+⭐⭐⭐⭐⭐	Excelente	Alta probabilidad de suba sólida
+
+📐 Fórmula del Score
+El Score se calcula sumando puntos por cada uno de los siguientes criterios cumplidos:
+
+🔢 Métricas Financieras
+Métrica	Condición para sumar puntos
+Beta	≤ 1
+Deuda/Patrimonio	< 1
+EV / EBITDA	< 15
+ROE	> 10%
+ROIC	> 8%
+PEG Ratio	< 1.5
+FCF Yield	> 0 y bonus si > 5%
+P/E Ratio	< 20
+P/B Ratio	< 3
+Dividend Yield	> 2%
+% Subida a Máximo	> 40%
+Revenue Growth YoY	> 15%
+
+✅ Cada condición cumplida suma 1 punto.
+🔁 El total se acumula hasta 14 puntos posibles.
+
+🌍 Contexto Global (2 puntos posibles)
+Se evalúa el contexto actual a partir de:
+
+VIX (volatilidad del mercado).
+
+Riesgo País (EMBI) del país donde cotiza el activo.
+
+Condición	Score adicional	Etiqueta
+VIX < 18 y EMBI < 500	+2	MUY FAVORABLE
+VIX < 25 y EMBI < 1000	+1	MODERADO
+VIX ≥ 25 o EMBI ≥ 1000	+0	ADVERSO
 
 ## 📤 Resultados
-- Grilla interactiva con colores por riesgo.
+- Grilla interactiva con colores por riesgo.F
 - Score final visible.
 - Botón para descargar CSV completo.
 

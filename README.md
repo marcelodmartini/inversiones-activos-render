@@ -161,6 +161,7 @@ VIX ≥ 25 o EMBI ≥ 1000	+0	ADVERSO
 ```txt
 streamlit
 yfinance
+tradingeconomics
 pandas
 investpy
 requests
@@ -210,7 +211,7 @@ Este proyecto permite analizar acciones, bonos y criptomonedas desde distintas f
     ├── byma.py                  # Scraping de cotizaciones desde BYMA
     ├── iamc.py                  # Lectura de archivos IAMC locales
     ├── rava.py                  # Scraping desde Rava para bonos
-    └── fundamentales.py         # Métricas fundamentales desde yfinance, Finnhub y FMP
+    └── fundamentales.py         # Métricas fundamentales desde yfinance, Finnhub, tradingeconomics y FMP
 ```
 
 ---
@@ -283,6 +284,7 @@ FMP_API_KEY = "tu_api_key"
 ## Créditos
 
 - [yFinance](https://pypi.org/project/yfinance/)
+- [tradingeconomics] (https://tradingeconomics.com)
 - [CoinGecko API](https://www.coingecko.com/en/api)
 - [Alpha Vantage](https://www.alphavantage.co/)
 - [Financial Modeling Prep](https://financialmodelingprep.com/)

@@ -1,9 +1,9 @@
 import re
 import yfinance as yf
-import requests
+import tradingeconomics as te
 from config import TRADINGECONOMICS_API_KEY
 
-# Diccionario fallback si falla la API
+# Fallback si falla la API
 riesgo_pais_por_pais = {
     "argentina": 1450,
     "brazil": 260,
@@ -24,7 +24,7 @@ pais_por_ticker = {
     "CEMEXCPO": "mexico", "EC": "colombia", "EMBR3": "brazil"
 }
 
-# Mapeo alternativo de ticker → ticker YFinance
+# Tickers locales a Yahoo Finance
 ticker_map = {
     "YPFD": "YPF.BA", "TGSU2": "TGSU2.BA", "MIRG": "MIRG.BA", "VISTA": "VIST",
     "FALABELLA": "FALABELLA.CL", "CEMEXCPO": "CEMEXCPO.MX", "OM:STIL": "STIL.ST", "HLSE:ETTE": "ETTE.HE"
@@ -36,17 +36,25 @@ def es_bono_argentino(ticker):
 def obtener_riesgo_pais(pais="argentina"):
     pais = pais.lower()
     if not TRADINGECONOMICS_API_KEY:
+        print(f"[Riesgo País] ❌ No API key configurada. Usando valor por defecto para {pais}")
         return riesgo_pais_por_pais.get(pais, riesgo_pais_por_pais["default"])
     try:
-        url = f"https://api.tradingeconomics.com/country/{pais}?c={TRADINGECONOMICS_API_KEY}"
-        r = requests.get(url)
-        r.raise_for_status()
-        data = r.json()
-        for item in data:
-            if item.get("category", "").lower() in ["government bond 10y", "credit rating"]:
-                return round(item.get("value", 0))
-    except:
-        pass
+        print(f"[TradingEconomics] 🔑 Login con API Key...")
+        te.login(TRADINGECONOMICS_API_KEY)
+
+        print(f"[TradingEconomics] 🌎 Buscando riesgo país para: {pais}")
+        df = te.getIndicatorData(country=pais, output_type="df")
+
+        print(f"[TradingEconomics] 🔍 Filtrando indicadores 'bond' o 'risk'")
+        df = df[df["Category"].str.lower().str.contains("bond|risk")]
+        if not df.empty:
+            valor = round(float(df.iloc[0]["Value"]))
+            print(f"[TradingEconomics] ✅ Riesgo país de {pais}: {valor}")
+            return valor
+        else:
+            print(f"[TradingEconomics] ⚠️ No se encontró riesgo país para {pais}, usando fallback")
+    except Exception as e:
+        print(f"[TradingEconomics] ❌ Error al consultar riesgo país para {pais}: {e}")
     return riesgo_pais_por_pais.get(pais, riesgo_pais_por_pais["default"])
 
 def obtener_contexto_mundial(ticker):
@@ -61,7 +69,8 @@ def obtener_contexto_mundial(ticker):
             return "Contexto Global: MODERADO", 1
         else:
             return "Contexto Global: ADVERSO", 0
-    except:
+    except Exception as e:
+        print(f"[Contexto Mundial] ❌ Error al obtener VIX o riesgo país: {e}")
         return "Contexto Global: DESCONOCIDO", 0
 
 def calcular_score(resultado):
@@ -93,19 +102,15 @@ def calcular_score(resultado):
         if roe > 0.10: score += 1
         if roic > 0.08: score += 1
         if peg < 1.5: score += 1
-
         if fcf_yield > 0: score += 1
         if fcf_yield > 5: score += 1
-
         if pe < 20: score += 1
         if pb < 3: score += 1
-
         if dividend_yield and dividend_yield > 0.02: score += 1
-
         if upside > 40: score += 1
         if revenue_growth > 15: score += 1
 
-        # Contexto mundial
+        # Contexto mundial (VIX + riesgo país)
         contexto, score_contexto = obtener_contexto_mundial(ticker)
         resultado["Contexto Global"] = contexto
         score += score_contexto
@@ -118,4 +123,5 @@ def calcular_score(resultado):
         else: return "⭐ (1/5 - Débil)", 1
 
     except Exception as e:
+        print(f"[Score] ❌ Error calculando score para {resultado.get('Ticker')}: {e}")
         return "N/A", 0

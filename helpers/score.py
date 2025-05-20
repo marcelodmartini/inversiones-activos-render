@@ -33,6 +33,17 @@ ticker_map = {
     "FALABELLA": "FALABELLA.CL", "CEMEXCPO": "CEMEXCPO.MX", "OM:STIL": "STIL.ST", "HLSE:ETTE": "ETTE.HE"
 }
 
+def obtener_pais_ticker(ticker):
+    try:
+        info = yf.Ticker(ticker).info
+        pais = info.get("country", "default")
+        if isinstance(pais, str):
+            return pais.lower()
+    except Exception:
+        pass
+    return "default"
+
+
 def es_bono_argentino(ticker):
     return bool(re.match(r"^(AL|GD|TX|TV|AE|TB)[0-9]+[D]?$", ticker.upper()))
 

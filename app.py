@@ -5,7 +5,7 @@ from pycoingecko import CoinGeckoAPI
 from helpers.graficos import graficar_precio_historico, graficar_radar_scores, graficar_subida_maximo
 
 # Importaciones de módulos helpers
-from helpers.score import ticker_map, pais_por_ticker, es_bono_argentino
+from helpers.score import ticker_map, obtener_pais_ticker, es_bono_argentino
 from helpers.yahoo import analizar_con_yfinance
 from helpers.alphavantage import analizar_con_alphavantage
 from helpers.coingecko import analizar_con_coingecko
@@ -136,7 +136,7 @@ if uploaded_file:
 
             if not resultado:
                 try:
-                    pais = pais_por_ticker.get(raw_ticker.upper(), 'brazil')
+                    pais = obtener_pais_ticker(raw_ticker.upper())
                     print(f"[INFO] Intentando con Investpy ({pais}): {ticker_clean}")
                     fuentes_probadas.append(f"Investpy ({pais})")
                     resultado = analizar_con_investpy(ticker_clean, pais, fecha_inicio, fecha_fin)

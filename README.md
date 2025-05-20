@@ -22,7 +22,7 @@ Este documento explica el significado de cada columna incluida en el análisis g
 | **Máximo**          | Precio máximo registrado dentro del mismo período.                                                                                                     |
 | **Actual**          | Precio actual del activo según la última cotización disponible.                                                                                        |
 | **% Subida a Máx**  | Potencial de revalorización hasta el máximo histórico dentro del período (%).                                                                          |
-| **Tipo**            | Clasificación del activo: `"Acción"`, `"Bono"` o `"Criptomoneda"`.                                                                                     |
+| **Tipo**            | Clasificación del activo: "Acción", "Bono" o "Criptomoneda".                                                                                           |
 | **Advertencia**     | Mensaje opcional si no se encontraron datos fundamentales completos. Puede aparecer: `⚠️ Solo precio disponible, sin métricas fundamentales`.          |
 | **País**            | País de origen de la empresa emisora o del activo.                                                                                                     |
 | **PEG Ratio**       | Relación Precio/Beneficio ajustada al crecimiento. Valor ideal: < 1.5.                                                                                 |
@@ -38,6 +38,9 @@ Este documento explica el significado de cada columna incluida en el análisis g
 | **Contexto**        | Breve resumen de la empresa o activo, traducido automáticamente al español.                                                                            |
 | **Cobertura**       | Indica cuántas de las métricas fundamentales clave fueron obtenidas. Ejemplo: `5/6`.                                                                   |
 | **Error**           | Campo opcional que aparece si no se pudo obtener ninguna información del activo.                                                                       |
+| **VIX**             | Índice de Volatilidad del mercado de opciones de Chicago, indicador del nivel de incertidumbre de mercado.                                             |
+| **Riesgo País**     | EMBI (índice de riesgo país) del país de origen del activo, según Trading Economics o un valor fallback.                                               |
+| **Contexto Global** | Evaluación automática del contexto macroeconómico según VIX + Riesgo País. Puede ser: MUY FAVORABLE, MODERADO o ADVERSO.                               |
 
 ---
 
@@ -60,6 +63,11 @@ Esta app desarrollada en Streamlit permite analizar acciones, criptomonedas y ac
    - Investpy
    - Finnhub
    - Financial Modeling Prep (FMP)
+
+## 📤 Resultados
+- Grilla interactiva con colores por riesgo.
+- Score final visible.
+- Botón para descargar CSV completo.
 
 ## 📊 Indicadores calculados
 Para cada activo, la app obtiene y calcula los siguientes indicadores fundamentales:

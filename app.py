@@ -12,7 +12,7 @@ from helpers.coingecko import analizar_con_coingecko
 from helpers.rava import obtener_precio_bono_rava
 from helpers.investpy_utils import analizar_con_investpy
 from helpers.fundamentales import obtener_info_fundamental
-from helpers.score import calcular_score
+from helpers.score import calcular_score, cargar_paises_te
 from config import ES_CLOUD, ALPHA_VANTAGE_API_KEY
 from helpers.byma import obtener_precio_bono_byma
 import subprocess
@@ -22,6 +22,8 @@ import openai
 from config import OPENAI_API_KEY  # ✅ Tomamos la API key desde config.py
 
 log_info("La app inició correctamente")
+
+cargar_paises_te()
 
 if "debug_logs" not in st.session_state:
     st.session_state.debug_logs = []

@@ -1,51 +1,44 @@
 import re
 import yfinance as yf
 import tradingeconomics as te
+import requests
 from config import TRADINGECONOMICS_API_KEY
 
-# Fallback si falla la API o el país no es permitido
+# --- Valores por defecto si falla la API ---
 riesgo_pais_por_pais = {
-    "argentina": 1450,
-    "brazil": 260,
-    "mexico": 320,
-    "chile": 170,
-    "colombia": 370,
-    "usa": 50,
-    "china": 70,
-    "india": 90,
-    "europe": 80,
+    "argentina": 1450, "brazil": 260, "mexico": 320,
+    "chile": 170, "colombia": 370, "usa": 50,
+    "china": 70, "india": 90, "europe": 80,
     "default": 400
 }
 
-# Para corregir nombres según lo que devuelve yfinance
+# --- Mapeo país YFinance → TE ---
 mapa_paises_yf = {
-    "united states": "usa",
-    "united kingdom": "europe",
-    "germany": "europe",
-    "france": "europe",
-    "italy": "europe",
+    "united states": "usa", "united kingdom": "europe",
+    "germany": "europe", "france": "europe", "italy": "europe",
     "spain": "europe"
 }
 
-# Tickers locales → Yahoo Finance
+# --- Tickers locales para YFinance ---
 ticker_map = {
     "YPFD": "YPF.BA", "TGSU2": "TGSU2.BA", "MIRG": "MIRG.BA", "VISTA": "VIST",
     "FALABELLA": "FALABELLA.CL", "CEMEXCPO": "CEMEXCPO.MX", "OM:STIL": "STIL.ST", "HLSE:ETTE": "ETTE.HE"
 }
 
-def obtener_pais_ticker(ticker):
+# --- Cache países válidos en TE ---
+paises_disponibles_te = set()
+
+def cargar_paises_te():
+    global paises_disponibles_te
     try:
-        info = yf.Ticker(ticker).info
-        pais = info.get("country", "default")
-        if isinstance(pais, str):
-            return pais.lower()
-    except Exception:
-        pass
-    return "default"
-
-
-def es_bono_argentino(ticker):
-    return bool(re.match(r"^(AL|GD|TX|TV|AE|TB)[0-9]+[D]?$", ticker.upper()))
+        te.login(TRADINGECONOMICS_API_KEY)
+        url = f"https://api.tradingeconomics.com/country?c={TRADINGECONOMICS_API_KEY}"
+        response = requests.get(url)
+        paises_disponibles_te = {p["country"].lower() for p in response.json()}
+        print(f"[TE] ✅ Cargados {len(paises_disponibles_te)} países")
+    except Exception as e:
+        print(f"[TE] ⚠️ Error al cargar países: {e}")
+        paises_disponibles_te = set()
 
 def obtener_pais_ticker(ticker):
     ticker_ = ticker_map.get(ticker.upper(), ticker.upper())
@@ -54,7 +47,7 @@ def obtener_pais_ticker(ticker):
         pais = info.get("country", "").lower()
         pais = mapa_paises_yf.get(pais, pais)
         if not pais:
-            raise ValueError("No se pudo detectar país del ticker")
+            raise ValueError("No se detectó país del ticker")
         return pais
     except Exception as e:
         print(f"[YFinance] ⚠️ No se pudo obtener país para {ticker}: {e}")
@@ -62,25 +55,27 @@ def obtener_pais_ticker(ticker):
 
 def obtener_riesgo_pais(pais="argentina"):
     pais = pais.lower()
-    if pais == "default":
-        print(f"[TradingEconomics] ⛔ País 'default' no es permitido para usuarios free. Usando fallback")
-        return riesgo_pais_por_pais["default"]
     if not TRADINGECONOMICS_API_KEY:
-        print(f"[Riesgo País] ❌ No API key configurada. Usando valor por defecto para {pais}")
+        print(f"[Riesgo País] ❌ No hay API key configurada. Usando valor por defecto para {pais}")
         return riesgo_pais_por_pais.get(pais, riesgo_pais_por_pais["default"])
+
+    if not paises_disponibles_te:
+        cargar_paises_te()
+
+    if pais not in paises_disponibles_te:
+        print(f"[TE] ⛔ País '{pais}' no permitido. Usando fallback.")
+        return riesgo_pais_por_pais.get(pais, riesgo_pais_por_pais["default"])
+
     try:
-        print(f"[TradingEconomics] 🔑 Login con API Key...")
-        te.login(TRADINGECONOMICS_API_KEY)
-        print(f"[TradingEconomics] 🌎 Buscando riesgo país para: {pais}")
         df = te.getIndicatorData(country=pais, output_type="df")
-        print(f"[TradingEconomics] 🔍 Filtrando indicadores 'bond' o 'risk'")
         df = df[df["Category"].str.lower().str.contains("bond|risk")]
         if not df.empty and "Value" in df.columns:
             valor = round(float(df.iloc[0]["Value"]))
-            print(f"[TradingEconomics] ✅ Riesgo país de {pais}: {valor}")
+            print(f"[TE] ✅ Riesgo país de {pais}: {valor}")
             return valor
     except Exception as e:
-        print(f"[TradingEconomics] ❌ Error al consultar riesgo país para {pais}: {e}")
+        print(f"[TE] ❌ Error consultando riesgo país para {pais}: {e}")
+
     return riesgo_pais_por_pais.get(pais, riesgo_pais_por_pais["default"])
 
 def obtener_contexto_mundial(ticker):
@@ -99,6 +94,9 @@ def obtener_contexto_mundial(ticker):
         print(f"[Contexto Mundial] ❌ Error al obtener VIX o riesgo país: {e}")
         return "Contexto Global: DESCONOCIDO", 0
 
+def es_bono_argentino(ticker):
+    return bool(re.match(r"^(AL|GD|TX|TV|AE|TB)[0-9]+[D]?$", ticker.upper()))
+
 def calcular_score(resultado):
     if resultado.get("Tipo") == "Bono":
         return "N/A", 0
@@ -107,7 +105,6 @@ def calcular_score(resultado):
     try:
         ticker = resultado.get("Ticker", "")
 
-        # Métricas fundamentales
         beta = resultado.get("Beta") or 0
         debt_equity = resultado.get("Debt/Equity") or 999
         ev_ebitda = resultado.get("EV/EBITDA") or 999
@@ -121,7 +118,6 @@ def calcular_score(resultado):
         upside = resultado.get("% Subida a Máx") or 0
         revenue_growth = resultado.get("Revenue Growth YoY") or 0
 
-        # Indicadores clave
         if beta <= 1: score += 1
         if debt_equity < 1: score += 1
         if ev_ebitda < 15: score += 1

@@ -34,8 +34,11 @@ def cargar_paises_te():
         te.login(TRADINGECONOMICS_API_KEY)
         url = f"https://api.tradingeconomics.com/country?c={TRADINGECONOMICS_API_KEY}"
         response = requests.get(url)
-        paises_disponibles_te = {p["country"].lower() for p in response.json()}
-        print(f"[TE] ✅ Cargados {len(paises_disponibles_te)} países")
+        if response.status_code == 200:
+            paises_disponibles_te = {p["country"].lower() for p in response.json()}
+            print(f"[TE] ✅ Cargados {len(paises_disponibles_te)} países")
+        else:
+            raise ValueError(f"HTTP {response.status_code} - {response.text}")
     except Exception as e:
         print(f"[TE] ⚠️ Error al cargar países: {e}")
         paises_disponibles_te = set()

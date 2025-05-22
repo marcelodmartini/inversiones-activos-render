@@ -191,22 +191,6 @@ def resaltar(val, mapa):
 # Nuevo formato recomendado
 styler = df_result.style
 
-if "Semáforo Riesgo" in df_result.columns:
-    styler = styler.map(lambda val: resaltar(val, {
-        "VERDE": "#c8e6c9", "AMARILLO": "#fff9c4", "ROJO": "#ffcdd2"
-    }), subset=["Semáforo Riesgo"])
-
-if "Crecimiento Futuro" in df_result.columns:
-    styler = styler.map(lambda val: resaltar(val, {
-        "🟢 Alto": "#c8e6c9", "🟡 Moderado": "#fff9c4", "🔴 Bajo": "#ffcdd2"
-    }), subset=["Crecimiento Futuro"])
-
-if "Recomendación" in df_result.columns:
-    styler = styler.map(lambda val: resaltar(val, {
-        "✅ Comprar": "#c8e6c9", "👀 Revisar": "#fff9c4", "❌ Evitar": "#ffcdd2"
-    }), subset=["Recomendación"])
-st.dataframe(styler, use_container_width=True)
-
 # Gráficos individuales
 if st.checkbox("📊 Mostrar gráficos individuales por activo analizado"):
     st.subheader("Gráficos por activo")
@@ -228,11 +212,33 @@ if errores_conexion:
     for err in errores_conexion:
         st.text(err)
 
-# Guardar CSV
+# Evitar error de Arrow al mostrar DataFrame con objetos complejos
+df_result_sin_hist = df_result.drop(columns=["Hist"], errors="ignore")
+
+# Estilo visual (reaplicado sobre el nuevo df limpio)
+styler = df_result_sin_hist.style
+if "Semáforo Riesgo" in df_result_sin_hist.columns:
+    styler = styler.map(lambda val: resaltar(val, {
+        "VERDE": "#c8e6c9", "AMARILLO": "#fff9c4", "ROJO": "#ffcdd2"
+    }), subset=["Semáforo Riesgo"])
+if "Crecimiento Futuro" in df_result_sin_hist.columns:
+    styler = styler.map(lambda val: resaltar(val, {
+        "🟢 Alto": "#c8e6c9", "🟡 Moderado": "#fff9c4", "🔴 Bajo": "#ffcdd2"
+    }), subset=["Crecimiento Futuro"])
+if "Recomendación" in df_result_sin_hist.columns:
+    styler = styler.map(lambda val: resaltar(val, {
+        "✅ Comprar": "#c8e6c9", "👀 Revisar": "#fff9c4", "❌ Evitar": "#ffcdd2"
+    }), subset=["Recomendación"])
+
+# ✅ Mostrar sin error
+st.dataframe(styler, use_container_width=True)
+
+# Guardar CSV limpio
 fecha_str = datetime.today().strftime("%Y-%m-%d")
 nombre_salida = f"AnalisisFinal-{fecha_str}_export.csv"
-df_result.drop(columns=["Hist"], errors="ignore").to_csv(nombre_salida, index=False)
-csv = df_result.to_csv(index=False).encode('utf-8')
+df_result_sin_hist.to_csv(nombre_salida, index=False)
+csv = df_result_sin_hist.to_csv(index=False).encode('utf-8')
+
 
 # Logs
 if st.session_state.debug_logs:

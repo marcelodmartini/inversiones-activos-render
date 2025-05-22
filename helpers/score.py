@@ -53,18 +53,32 @@ def agregar_proyecciones_forward(resultado, ticker_map):
         info = yf.Ticker(ticker_).info
         forward_eps = info.get("forwardEps")
         forward_rev_growth = info.get("revenueGrowth")
+        sector = info.get("sector")
 
         if forward_eps is not None:
             resultado["Forward EPS"] = forward_eps
 
         if forward_rev_growth is not None:
-            resultado["Forward Revenue Growth"] = forward_rev_growth * 100  # convertir a porcentaje
-    except Exception as e:
+            forward_pct = forward_rev_growth * 100
+            resultado["Forward Revenue Growth"] = forward_pct
+            if forward_pct >= 15:
+                resultado["Crecimiento Futuro"] = "🟢 Alto"
+            elif forward_pct >= 5:
+                resultado["Crecimiento Futuro"] = "🟡 Moderado"
+            else:
+                resultado["Crecimiento Futuro"] = "🔴 Bajo"
+        else:
+            resultado["Crecimiento Futuro"] = "🔴 Bajo"
+
+        if sector:
+            resultado["Sector"] = sector
+
+    except Exception:
         resultado["Forward EPS"] = None
         resultado["Forward Revenue Growth"] = None
+        resultado["Crecimiento Futuro"] = "🔴 Bajo"
 
     return resultado
-
 
 # --- Funciones core ---
 def cargar_paises_te():

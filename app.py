@@ -138,10 +138,7 @@ with st.spinner("Analizando activos..."):
             except Exception as e:
                 errores_conexion.append(f"[BYMA] {ticker_clean}: {e}")
 
-        if resultado:
-            resultado["Fuente"] = resultado.get("Fuente", "No informada")
-            resultado["Fuentes Probadas"] = ", ".join(fuentes_probadas)
-        else:
+        if resultado is None:
             resultado = {
                 "Ticker": ticker_clean,
                 "Error": "❌ No se encontró información en ninguna fuente",
@@ -163,7 +160,6 @@ with st.spinner("Analizando activos..."):
         resultados.append(resultado)
 
 # Crear DataFrame final
-
 df_result = pd.DataFrame(resultados)
 df_result = df_result.sort_values("__orden_score", ascending=False).drop(columns="__orden_score")
 
@@ -175,42 +171,17 @@ df_result = df_result[[col for col in col_prio if col in df_result.columns] + [c
 def recomendar(score_texto, crecimiento):
     match = re.search(r"(\d+)/5", str(score_texto))
     score_valor = int(match.group(1)) if match else 0
-    if score_valor >= 4 and crecimiento == "🟢 Alto":
+    if score_valor >= 4:
         return "✅ Comprar"
-    elif score_valor >= 3 and crecimiento in ["🟢 Alto", "🟡 Moderado"]:
+    elif score_valor == 3 and crecimiento in ["🟢 Alto", "🟡 Moderado"]:
         return "👀 Revisar"
     return "❌ Evitar"
 
 df_result["Recomendación"] = df_result.apply(lambda row: recomendar(row["Score Final"], row.get("Crecimiento Futuro", "")), axis=1)
 
 # Estilo visual
-
 def resaltar(val, mapa):
     return f"background-color: {mapa.get(val, '#eeeeee')}; font-weight: bold" if isinstance(val, str) else ""
-
-# Nuevo formato recomendado
-styler = df_result.style
-
-# Gráficos individuales
-if st.checkbox("📊 Mostrar gráficos individuales por activo analizado"):
-    st.subheader("Gráficos por activo")
-    for _, fila in df_result.iterrows():
-        st.markdown(f"---\n### {fila['Ticker']}")
-        hist = fila.get("Hist")
-        if isinstance(hist, dict): hist = pd.DataFrame(hist)
-        elif not isinstance(hist, pd.DataFrame): hist = None
-        try:
-            graficar_precio_historico(fila['Ticker'], hist)
-            graficar_subida_maximo(fila['Ticker'], fila.get('Actual'), fila.get('Máximo'))
-            graficar_radar_scores(fila['Ticker'], {k: v for k, v in fila.items() if isinstance(v, (int, float))})
-        except Exception as e:
-            st.warning(f"Error al graficar {fila['Ticker']}: {e}")
-
-# Mostrar errores
-if errores_conexion:
-    st.warning("⚠️ Errores de conexión detectados:")
-    for err in errores_conexion:
-        st.text(err)
 
 # Evitar error de Arrow al mostrar DataFrame con objetos complejos
 df_result_sin_hist = df_result.drop(columns=["Hist"], errors="ignore")
@@ -233,12 +204,32 @@ if "Recomendación" in df_result_sin_hist.columns:
 # ✅ Mostrar sin error
 st.dataframe(styler, use_container_width=True)
 
+# Gráficos individuales
+if st.checkbox("📊 Mostrar gráficos individuales por activo analizado"):
+    st.subheader("Gráficos por activo")
+    for _, fila in df_result.iterrows():
+        st.markdown(f"---\n### {fila['Ticker']}")
+        hist = fila.get("Hist")
+        if isinstance(hist, dict): hist = pd.DataFrame(hist)
+        elif not isinstance(hist, pd.DataFrame): hist = None
+        try:
+            graficar_precio_historico(fila['Ticker'], hist)
+            graficar_subida_maximo(fila['Ticker'], fila.get('Actual'), fila.get('Máximo'))
+            graficar_radar_scores(fila['Ticker'], {k: v for k, v in fila.items() if isinstance(v, (int, float))})
+        except Exception as e:
+            st.warning(f"Error al graficar {fila['Ticker']}: {e}")
+
+# Mostrar errores
+if errores_conexion:
+    st.warning("⚠️ Errores de conexión detectados:")
+    for err in errores_conexion:
+        st.text(err)
+
 # Guardar CSV limpio
 fecha_str = datetime.today().strftime("%Y-%m-%d")
 nombre_salida = f"AnalisisFinal-{fecha_str}_export.csv"
 df_result_sin_hist.to_csv(nombre_salida, index=False)
 csv = df_result_sin_hist.to_csv(index=False).encode('utf-8')
-
 
 # Logs
 if st.session_state.debug_logs:

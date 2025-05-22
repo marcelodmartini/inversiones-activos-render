@@ -16,7 +16,7 @@ from helpers.score import calcular_score, cargar_paises_te
 from config import ES_CLOUD, ALPHA_VANTAGE_API_KEY
 from helpers.byma import obtener_precio_bono_byma
 from helpers.logger import log_info, log_error
-from helpers.proyecciones import agregar_proyecciones_forward
+from helpers.score import agregar_proyecciones_forward
 from config import OPENAI_API_KEY
 import openai
 import glob

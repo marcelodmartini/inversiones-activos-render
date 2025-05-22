@@ -17,6 +17,7 @@ from config import ES_CLOUD, ALPHA_VANTAGE_API_KEY, OPENAI_API_KEY
 import openai
 import glob
 import os
+from pandas.io.formats.style import Styler
 
 log_info("La app inició correctamente")
 cargar_paises_te()
@@ -42,9 +43,15 @@ archivo_por_defecto = obtener_csv_mas_reciente()
 
 if uploaded_file:
     df_input = pd.read_csv(uploaded_file)
+    if "Ticker" not in df_input.columns:
+        st.error("❌ El archivo debe contener una columna llamada 'Ticker'.")
+        st.stop()
     st.success("✅ Archivo CSV con tickers cargado manualmente")
 elif archivo_por_defecto:
     df_input = pd.read_csv(archivo_por_defecto)
+    if "Ticker" not in df_input.columns:
+        st.error(f"❌ El archivo por defecto `{archivo_por_defecto}` no contiene la columna 'Ticker'.")
+        st.stop()
     st.warning(f"⚠️ Usando archivo por defecto: `{archivo_por_defecto}`")
 else:
     st.error("❌ No se cargó ningún archivo CSV válido.")
@@ -155,14 +162,16 @@ with st.spinner("Analizando activos..."):
         resultado["__orden_score"] = score_numerico
         resultados.append(resultado)
 
+# Crear DataFrame final
+
 df_result = pd.DataFrame(resultados)
 df_result = df_result.sort_values("__orden_score", ascending=False).drop(columns="__orden_score")
 
-# Reordenar columnas
+# Columnas prioritarias
 col_prio = ["Ticker", "Semáforo Riesgo", "Crecimiento Futuro", "Cobertura", "Score Final", "% Subida a Máx", "Beta", "País"]
 df_result = df_result[[col for col in col_prio if col in df_result.columns] + [c for c in df_result.columns if c not in col_prio]]
 
-# Recomendación
+# Recomendación inteligente
 def recomendar(score_texto, crecimiento):
     match = re.search(r"(\d+)/5", str(score_texto))
     score_valor = int(match.group(1)) if match else 0
@@ -174,16 +183,31 @@ def recomendar(score_texto, crecimiento):
 
 df_result["Recomendación"] = df_result.apply(lambda row: recomendar(row["Score Final"], row.get("Crecimiento Futuro", "")), axis=1)
 
-# Estilo
+# Estilo visual
+
 def resaltar(val, mapa):
     return f"background-color: {mapa.get(val, '#eeeeee')}; font-weight: bold" if isinstance(val, str) else ""
 
-styled_df = df_result.style\
-    .applymap(lambda v: resaltar(v, {"VERDE": "#c8e6c9", "AMARILLO": "#fff9c4", "ROJO": "#ffcdd2"}), subset=["Semáforo Riesgo"])\
-    .applymap(lambda v: resaltar(v, {"🟢 Alto": "#c8e6c9", "🟡 Moderado": "#fff9c4", "🔴 Bajo": "#ffcdd2"}), subset=["Crecimiento Futuro"])\
-    .applymap(lambda v: resaltar(v, {"✅ Comprar": "#c8e6c9", "👀 Revisar": "#fff9c4", "❌ Evitar": "#ffcdd2"}), subset=["Recomendación"])
+# Nuevo formato recomendado
+styler = df_result.style
 
-# Gráficos
+if "Semáforo Riesgo" in df_result.columns:
+    styler = styler.map(lambda val: resaltar(val, {
+        "VERDE": "#c8e6c9", "AMARILLO": "#fff9c4", "ROJO": "#ffcdd2"
+    }), subset=["Semáforo Riesgo"])
+
+if "Crecimiento Futuro" in df_result.columns:
+    styler = styler.map(lambda val: resaltar(val, {
+        "🟢 Alto": "#c8e6c9", "🟡 Moderado": "#fff9c4", "🔴 Bajo": "#ffcdd2"
+    }), subset=["Crecimiento Futuro"])
+
+if "Recomendación" in df_result.columns:
+    styler = styler.map(lambda val: resaltar(val, {
+        "✅ Comprar": "#c8e6c9", "👀 Revisar": "#fff9c4", "❌ Evitar": "#ffcdd2"
+    }), subset=["Recomendación"])
+st.dataframe(styler, use_container_width=True)
+
+# Gráficos individuales
 if st.checkbox("📊 Mostrar gráficos individuales por activo analizado"):
     st.subheader("Gráficos por activo")
     for _, fila in df_result.iterrows():
@@ -198,21 +222,21 @@ if st.checkbox("📊 Mostrar gráficos individuales por activo analizado"):
         except Exception as e:
             st.warning(f"Error al graficar {fila['Ticker']}: {e}")
 
-st.dataframe(styled_df, use_container_width=True)
-
+# Mostrar errores
 if errores_conexion:
     st.warning("⚠️ Errores de conexión detectados:")
     for err in errores_conexion:
         st.text(err)
 
-# Guardar CSV final
+# Guardar CSV
 fecha_str = datetime.today().strftime("%Y-%m-%d")
 nombre_salida = f"AnalisisFinal-{fecha_str}_export.csv"
 df_result.drop(columns=["Hist"], errors="ignore").to_csv(nombre_salida, index=False)
 csv = df_result.to_csv(index=False).encode('utf-8')
 
+# Logs
 if st.session_state.debug_logs:
-    st.markdown("### 🛠️ Logs de Depuración")
-    st.text_area("Salida de depuración", "\n".join(st.session_state.debug_logs), height=300)
+    with st.expander("🛠️ Logs de Depuración"):
+        st.text_area("Salida de depuración", "\n".join(st.session_state.debug_logs), height=300)
 
 st.download_button("📥 Descargar resultados en CSV", data=csv, file_name=nombre_salida)

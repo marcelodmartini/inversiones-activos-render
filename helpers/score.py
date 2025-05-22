@@ -45,6 +45,27 @@ def calcular_macd(df, short=12, long=26, signal=9):
     signal_line = macd.ewm(span=signal, adjust=False).mean()
     return macd, signal_line
 
+def agregar_proyecciones_forward(resultado, ticker_map):
+    ticker = resultado.get("Ticker", "")
+    ticker_ = ticker_map.get(ticker.upper(), ticker.upper())
+
+    try:
+        info = yf.Ticker(ticker_).info
+        forward_eps = info.get("forwardEps")
+        forward_rev_growth = info.get("revenueGrowth")
+
+        if forward_eps is not None:
+            resultado["Forward EPS"] = forward_eps
+
+        if forward_rev_growth is not None:
+            resultado["Forward Revenue Growth"] = forward_rev_growth * 100  # convertir a porcentaje
+    except Exception as e:
+        resultado["Forward EPS"] = None
+        resultado["Forward Revenue Growth"] = None
+
+    return resultado
+
+
 # --- Funciones core ---
 def cargar_paises_te():
     global paises_disponibles_te

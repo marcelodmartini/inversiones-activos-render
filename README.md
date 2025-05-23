@@ -1,171 +1,170 @@
 # Análisis de Activos Financieros con Fallback Inteligente y Score Unificado
 
-Aquí tienes el contenido para un archivo `README.md` que explica detalladamente el significado de cada columna del análisis financiero generado por tu script:
+Este `README.md` explica en detalle el funcionamiento de la aplicación Streamlit `Análisis de Activos Financieros`, que permite evaluar acciones, bonos y criptomonedas mediante indicadores fundamentales, técnicos y contexto macroeconómico, generando un Score Final inteligente.
 
 ---
 
-# 📊 Análisis de Activos Financieros — Descripción de Columnas
+## 📊 Descripción de Columnas del Informe
 
-Este documento explica el significado de cada columna incluida en el análisis generado por la aplicación Streamlit `Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes`. El archivo CSV descargable contiene un resumen completo de activos como acciones, bonos y criptomonedas con métricas clave.
-
----
-
-## 🗂️ Columnas del Informe
-
-| Columna             | Descripción                                                                                                                                            |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Score Final**     | Calificación general del activo basada en un sistema de puntuación de 1 a 5 estrellas, según métricas financieras clave.                               |
-| **Semáforo Riesgo** | Indicador visual de riesgo basado en la volatilidad (Beta): <br>🟢 **VERDE**: Bajo riesgo<br>🟡 **AMARILLO**: Riesgo medio<br>🔴 **ROJO**: Riesgo alto |
-| **Ticker**          | Código identificador del activo, usado por plataformas financieras (ej: `AAPL`, `AL30D`, `BTC`).                                                       |
-| **Fuente**          | Fuente de donde se obtuvo el precio del activo: puede ser *Yahoo Finance*, *Alpha Vantage*, *Investpy*, *CoinGecko*, o *Rava*.                         |
-| **Mínimo**          | Precio mínimo registrado dentro del rango de fechas seleccionado.                                                                                      |
-| **Máximo**          | Precio máximo registrado dentro del mismo período.                                                                                                     |
-| **Actual**          | Precio actual del activo según la última cotización disponible.                                                                                        |
-| **% Subida a Máx**  | Potencial de revalorización hasta el máximo histórico dentro del período (%).                                                                          |
-| **Tipo**            | Clasificación del activo: "Acción", "Bono" o "Criptomoneda".                                                                                           |
-| **Advertencia**     | Mensaje opcional si no se encontraron datos fundamentales completos. Puede aparecer: `⚠️ Solo precio disponible, sin métricas fundamentales`.          |
-| **País**            | País de origen de la empresa emisora o del activo.                                                                                                     |
-| **PEG Ratio**       | Relación Precio/Beneficio ajustada al crecimiento. Valor ideal: < 1.5.                                                                                 |
-| **P/E Ratio**       | Relación Precio/Utilidad (Price to Earnings). Menor a 20 es ideal en términos generales.                                                               |
-| **P/B Ratio**       | Relación Precio/Valor Libro. Ideal: < 3 para evitar sobrevaloración.                                                                                   |
-| **ROE**             | Rentabilidad sobre el Patrimonio (Return on Equity). Mide eficiencia financiera. Ideal: > 10%.                                                         |
-| **ROIC**            | Rentabilidad sobre el Capital Invertido (Return on Invested Capital). Ideal: > 8%.                                                                     |
-| **FCF Yield**       | Rendimiento del Flujo de Caja Libre (%). Ideal: > 5%.                                                                                                  |
-| **Debt/Equity**     | Proporción de deuda respecto al capital propio. Ideal: < 1.                                                                                            |
-| **EV/EBITDA**       | Relación entre Valor Empresa y EBITDA. Valor inferior a 15 es generalmente positivo.                                                                   |
-| **Dividend Yield**  | Rentabilidad por dividendos (%). Ideal para inversores de ingresos: > 2%.                                                                              |
-| **Beta**            | Volatilidad relativa del activo respecto al mercado. Beta < 1 indica menor riesgo.                                                                     |
-| **Contexto**        | Breve resumen de la empresa o activo, traducido automáticamente al español.                                                                            |
-| **Cobertura**       | Indica cuántas de las métricas fundamentales clave fueron obtenidas. Ejemplo: `5/6`.                                                                   |
-| **Error**           | Campo opcional que aparece si no se pudo obtener ninguna información del activo.                                                                       |
-| **VIX**             | Índice de Volatilidad del mercado de opciones de Chicago, indicador del nivel de incertidumbre de mercado.                                             |
-| **Riesgo País**     | EMBI (índice de riesgo país) del país de origen del activo, según Trading Economics o un valor fallback.                                               |
-| **Contexto Global** | Evaluación automática del contexto macroeconómico según VIX + Riesgo País. Puede ser: MUY FAVORABLE, MODERADO o ADVERSO.                               |
+| Columna                      | Descripción                                                                             |
+| ---------------------------- | --------------------------------------------------------------------------------------- |
+| **Score Final**              | Calificación de 1 a 5 estrellas según métricas fundamentales, técnicas y contexto.      |
+| **Score Numérico Total**     | Puntaje acumulado numérico basado en \~20 condiciones.                                  |
+| **Justificación Score**      | Lista textual de los factores que aportaron al score (ej: "ROE > 10%", "MACD cruzado"). |
+| **Semáforo Riesgo**          | Riesgo del activo según su Beta: 🟢 Bajo, 🟡 Medio, 🔴 Alto.                            |
+| **Ticker**                   | Código identificador del activo (ej: AAPL, AL30D, BTC).                                 |
+| **Fuente**                   | Fuente de datos utilizada: Yahoo, Alpha Vantage, CoinGecko, Investpy, etc.              |
+| **Mínimo / Máximo / Actual** | Precios registrados en el período seleccionado.                                         |
+| **% Subida a Máx**           | Potencial de revalorización al máximo anterior.                                         |
+| **Tipo**                     | Clasificación: "Acción", "Bono", "Criptomoneda".                                        |
+| **Advertencia**              | Indica si faltan métricas fundamentales.                                                |
+| **País**                     | País de origen del activo.                                                              |
+| **PEG, P/E, P/B Ratio**      | Ratios de valuación fundamentales.                                                      |
+| **ROE, ROIC**                | Indicadores de rentabilidad.                                                            |
+| **FCF Yield**                | Rendimiento de flujo de caja libre.                                                     |
+| **Debt/Equity**              | Nivel de apalancamiento financiero.                                                     |
+| **EV/EBITDA**                | Ratio empresa / beneficios.                                                             |
+| **Dividend Yield**           | Rentabilidad por dividendos.                                                            |
+| **Beta**                     | Volatilidad relativa respecto al mercado.                                               |
+| **Contexto**                 | Breve resumen de la empresa, traducido.                                                 |
+| **CAGR 3Y**                  | Tasa de crecimiento anual compuesta en 3 años.                                          |
+| **Volumen Saludable**        | Si el volumen supera el promedio de 20 días.                                            |
+| **Cobertura**                | Métricas obtenidas / disponibles. Ej: 8/10                                              |
+| **VIX / Riesgo País**        | Indicadores de contexto macro.                                                          |
+| **Contexto Global**          | Evaluación del entorno económico: MUY FAVORABLE, MODERADO o ADVERSO.                    |
 
 ---
 
-## 📝 Notas Adicionales
+## 🧠 ¿Por qué este Score es confiable y preciso?
 
-* Si un activo no cuenta con datos fundamentales suficientes, solo se mostrará el precio y se incluirá una advertencia.
-* Los valores se calculan para el rango de fechas indicado por el usuario al inicio de la aplicación.
-* El sistema puede usar varias fuentes alternativas automáticamente (fallback) en caso de que una no proporcione datos.
+El cálculo del **Score Final (1 a 5 estrellas)** se basa en una combinación avanzada de métricas **financieras**, **fundamentales**, **técnicas**, **proyecciones a futuro**, **riesgos regulatorios**, **contexto macroeconómico global**, e incluso **análisis sectorial estratégico**.
+
+### ✅ ¿Qué lo hace exacto?
+
+- **Cobertura integral de 40+ variables cuantitativas** extraídas de múltiples fuentes confiables (Yahoo Finance, FMP, Finnhub, TradingEconomics, CoinGecko, etc.).
+- **Proyecciones Forward**: el modelo evalúa datos como *EPS futuro*, *crecimiento proyectado de ingresos*, y *margen futuro neto* para anticipar escenarios.
+- **Métricas técnicas** como RSI, MACD, EMA y Bandas de Bollinger aportan señales de momentum, soportes y tendencias.
+- **Penalizaciones inteligentes** por sectores cíclicos, exposición a regulaciones o desbalance financiero.
+- **Bonus por contexto macro** según VIX y Riesgo País real, lo cual permite adaptar el score al entorno global.
+- **Modelado ML opcional**: el script incluye una interfaz para incorporar predicciones con modelos entrenados externamente (`modelo_retorno.pkl`), para mejorar la exactitud predictiva.
+- **Justificaciones trazables**: cada Score incluye una lista clara de condiciones que explican por qué subió o bajó, lo que permite hacer *backtesting transparente*.
+- **Soporte para activos diversos**: acciones, bonos, CEDEARs y criptomonedas pueden ser evaluados con precisión en un mismo panel.
+
+### 🎯 Ventajas sobre otros sistemas
+
+| Característica                       | Este Score Unificado        | Rating Tradicional |
+|-------------------------------------|-----------------------------|--------------------|
+| Datos técnicos + fundamentales      | ✅ Integrado                | ❌ No combinados   |
+| Forward + Histórico                 | ✅ Sí                       | ❌ Parcial         |
+| Sector estratégico + contexto país  | ✅ Considerado              | ❌ Ignorado        |
+| Transparencia de cálculo            | ✅ Justificaciones visibles | ❌ Caja negra       |
+| Backtesting con CSV diario          | ✅ Guardado automático      | ❌ No aplica        |
+
+---
 
 
-Esta app desarrollada en Streamlit permite analizar acciones, criptomonedas y activos bursátiles de múltiples países y fuentes, generando una grilla con indicadores financieros clave, semáforo de riesgo y un **score final del 1 al 5** que evalúa la calidad de inversión de cada activo.
+## 📅 Cómo usar la app
 
-## 📥 ¿Cómo usar?
-1. Subí un archivo `.csv` con una columna `Ticker` (ej: AAPL, BTC, GLEN.L, PETR4.SA).
-2. Elegí la fecha de inicio y fin del análisis.
-3. La app consultará automáticamente a las siguientes fuentes:
-   - Yahoo Finance
-   - Alpha Vantage
-   - CoinGecko
-   - Investpy
-   - Finnhub
-   - Financial Modeling Prep (FMP)
+1. Subí un archivo `.csv` con una columna `Ticker`.
+2. Seleccioná un rango de fechas.
+3. La app consultará automáticamente varias fuentes financieras.
 
-## 📤 Resultados
-- Grilla interactiva con colores por riesgo.
-- Score final visible.
-- Botón para descargar CSV completo.
+---
 
-## 📊 Indicadores calculados
-Para cada activo, la app obtiene y calcula los siguientes indicadores fundamentales:
+## 🔹 Fuentes de datos utilizadas
 
-- PEG Ratio
-- P/E Ratio
-- P/B Ratio
-- ROE
-- ROIC
-- FCF Yield
-- Debt/Equity
-- EV/EBITDA
-- Dividend Yield
-- Beta
-- País
-- Contexto actual de la empresa (traducido al español)
+* Yahoo Finance
+* Alpha Vantage
+* CoinGecko
+* Investpy
+* Finnhub
+* Financial Modeling Prep (FMP)
+* BYMA, Rava, IAMC (para bonos argentinos)
 
-## 🚦 Semáforo de Riesgo
-Basado en el valor del **Beta**:
+---
 
-| Semáforo   | Condición         | Significado              |
-|------------|-------------------|---------------------------|
-| 🟢 VERDE   | Beta ≤ 1          | Riesgo bajo              |
-| 🟡 AMARILLO| 1 < Beta ≤ 1.5     | Riesgo moderado          |
-| 🔴 ROJO    | Beta > 1.5        | Riesgo alto              |
+## 📊 Indicadores Calculados
 
-## 🧮 Score Financiero Final (1 a 5)
-Un indicador compuesto que sintetiza la salud financiera del activo. Se calcula con 10 métricas clave. El puntaje se traduce así:
+* PEG Ratio, P/E, P/B
+* ROE, ROIC, FCF Yield
+* Debt/Equity, EV/EBITDA
+* Dividend Yield, Beta
+* CAGR 3Y (Crecimiento anual compuesto)
+* Forward EPS / Revenue Growth
+* RSI, MACD, EMA50, EMA200, Bollinger Bands
+* Volumen saludable (comparado a 20 ruedas)
 
-| Score | Nivel      | Descripción                        |
-|--------|------------|------------------------------------|
-| 5/5    | Excelente | Alta calidad, baja deuda, alto potencial de crecimiento
-| 4/5    | Muy bueno | Muy buenos fundamentos, leve riesgo
-| 3/5    | Aceptable | Correcto, pero con advertencias
-| 2/5    | Riesgoso  | Débil en fundamentos o volátil
-| 1/5    | Débil     | Mala calidad financiera
+---
 
-### 🎯 Fórmula de cálculo:
-📊 ¿Qué es este proyecto?
-Este módulo evalúa el potencial de crecimiento de activos financieros (acciones o bonos), asignando un Score Final del 1 al 5 basado en:
+## 🛑 Semáforo de Riesgo
 
-Indicadores financieros clave.
+| Color       | Condición      | Significado     |
+| ----------- | -------------- | --------------- |
+| 🟢 VERDE    | Beta ≤ 1       | Bajo riesgo     |
+| 🟡 AMARILLO | 1 < Beta ≤ 1.5 | Riesgo moderado |
+| 🔴 ROJO     | Beta > 1.5     | Riesgo alto     |
 
-Potencial de suba.
+---
 
-Riesgo relativo.
+## 💡 Score Financiero Final (1 a 5)
 
-Condiciones del contexto económico global.
+| Score | Nivel     | Descripción                                         |
+| ----- | --------- | --------------------------------------------------- |
+| 5/5   | Excelente | Alta calidad, fundamentos y contexto muy favorables |
+| 4/5   | Muy Bueno | Muy buenos fundamentales y buenas proyecciones      |
+| 3/5   | Aceptable | Balanceado, pero con advertencias                   |
+| 2/5   | Riesgoso  | Fundamentos débiles, volatilidad o contexto malo    |
+| 1/5   | Débil     | Score bajo o sector desfavorable                    |
 
-🧠 ¿Qué mide el Score?
-El sistema devuelve un Score entre 1 y 5 estrellas:
+---
 
-Score	Etiqueta	Significado
-⭐	Débil	Alto riesgo, bajos fundamentos
-⭐⭐	Riesgoso	Fundamentos débiles
-⭐⭐⭐	Aceptable	Balanceado pero no sobresaliente
-⭐⭐⭐⭐	Muy Bueno	Gran potencial, buena relación R/B
-⭐⭐⭐⭐⭐	Excelente	Alta probabilidad de suba sólida
+## 📊 Cómo se calcula el Score
 
-📐 Fórmula del Score
-El Score se calcula sumando puntos por cada uno de los siguientes criterios cumplidos:
+### Puntúa cada uno de los siguientes criterios:
 
-🔢 Métricas Financieras
-Métrica	Condición para sumar puntos
-Beta	≤ 1
-Deuda/Patrimonio	< 1
-EV / EBITDA	< 15
-ROE	> 10%
-ROIC	> 8%
-PEG Ratio	< 1.5
-FCF Yield	> 0 y bonus si > 5%
-P/E Ratio	< 20
-P/B Ratio	< 3
-Dividend Yield	> 2%
-% Subida a Máximo	> 40%
-Revenue Growth YoY	> 15%
+* **Beta ≤ 1**
+* **Debt/Equity < 1**
+* **EV/EBITDA < 15**
+* **ROE > 10%**, **ROIC > 8%**
+* **PEG Ratio < 1.5** o justificado
+* **FCF Yield > 0% (+1) y >5% (+1)**
+* **P/E < 20**, **P/B < 3**
+* **Dividend Yield > 2%**
+* **% Subida a Máximo > 40%**
+* **Revenue Growth YoY > 15%**
+* **Crecimiento futuro (Forward Revenue > 10%)**
+* **EPS futuro positivo**, **Margen Futuro > 15%**
 
-✅ Cada condición cumplida suma 1 punto.
-🔁 El total se acumula hasta 14 puntos posibles.
+### Indicadores Técnicos que suman puntos
 
-🌍 Contexto Global (2 puntos posibles)
-Se evalúa el contexto actual a partir de:
+* RSI saludable (30 < RSI < 70)
+* MACD cruzado al alza
+* EMA50 > EMA200
+* Precio debajo de Banda de Bollinger inferior
 
-VIX (volatilidad del mercado).
+### Bonus de contexto y sector
 
-Riesgo País (EMBI) del país donde cotiza el activo.
+* **Contexto Global muy favorable: +2**, moderado: +1
+* **Sector estratégico** (IA, energía, defensa): +1
 
-Condición	Score adicional	Etiqueta
-VIX < 18 y EMBI < 500	+2	MUY FAVORABLE
-VIX < 25 y EMBI < 1000	+1	MODERADO
-VIX ≥ 25 o EMBI ≥ 1000	+0	ADVERSO
+### Penalizaciones
 
-## 📤 Resultados
-- Grilla interactiva con colores por riesgo.F
-- Score final visible.
-- Botón para descargar CSV completo.
+* **P/E > 60** o **ROE negativo**: −1
+* **Sector cíclico o con riesgo regulatorio por país**: −1 o más
 
-## 📦 Requisitos (`requirements.txt`)
+---
+
+## 📈 Justificación del Score y Backtesting
+
+Cada activo incluye la columna `Justificación Score` con el detalle exacto de los puntos sumados o restados.
+Esto permite auditar el score y entender por qué un activo fue recomendado o no.
+
+El archivo con los scores finales es guardado automáticamente en `/historicos/` para permitir el backtesting.
+
+---
+
+## 🛋 Requisitos
+
 ```txt
 streamlit
 yfinance
@@ -176,130 +175,19 @@ requests
 pycoingecko
 alpha_vantage
 deep-translator
+joblib
 ```
 
 ## 🔐 Variables en `.streamlit/secrets.toml`
+
 ```toml
 ALPHA_VANTAGE_API_KEY = "..."
 FINNHUB_API_KEY = "..."
 FMP_API_KEY = "..."
-```
-
-## 🧪 Opcional
-Podés expandir el modelo para incluir:
-- Inteligencia artificial sobre `Contexto`
-- Ranking por sectores o países
-- Históricos de evolución de score
-
----
-Hecho con ❤️ y múltiples APIs por [marcelodmartini]
-
-# README.md
-
-# 📊 Análisis de Activos Financieros con Múltiples Fuentes (Streamlit)
-
-Este proyecto permite analizar acciones, bonos y criptomonedas desde distintas fuentes financieras, utilizando Streamlit como interfaz. Ofrece métricas fundamentales, precios históricos y un sistema de puntuación automatizado.
-
----
-
-## 📁 Estructura del Proyecto
-
-```
-/finanzas_app
-├── main_app.py                  # App principal Streamlit
-├── config.py                    # API keys y configuración
-├── requirements.txt             # Dependencias del proyecto
-└── helpers/                     # Código modular por fuente
-    ├── utils.py                 # Utilidades generales, regex, mapeos
-    ├── score.py                 # Cálculo del puntaje financiero
-    ├── yahoo.py                 # Datos históricos desde Yahoo Finance
-    ├── alphavantage.py          # Datos desde Alpha Vantage API
-    ├── coingecko.py             # Precios de criptomonedas (CoinGecko)
-    ├── investpy                 # (pendiente si se requiere)
-    ├── byma.py                  # Scraping de cotizaciones desde BYMA
-    ├── iamc.py                  # Lectura de archivos IAMC locales
-    ├── rava.py                  # Scraping desde Rava para bonos
-    └── fundamentales.py         # Métricas fundamentales desde yfinance, Finnhub, tradingeconomics y FMP
+TRADINGECONOMICS_API_KEY = "..."
+OPENAI_API_KEY = "..."
 ```
 
 ---
 
-## 🔧 Instalación
-
-```bash
-git clone https://github.com/tuusuario/finanzas_app.git
-cd finanzas_app
-python -m venv venv
-source venv/bin/activate  # En Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
-
----
-
-## 🚀 Ejecución
-
-```bash
-streamlit run main_app.py
-```
-
-Subí un archivo `.csv` con una columna `Ticker`, por ejemplo:
-```
-Ticker
-AAPL
-BTC
-AL30D
-TGSU2
-```
-
----
-
-## 📡 Fuentes de Datos
-
-- 📈 **Yahoo Finance**: precios históricos y métricas básicas.
-- 🔑 **Alpha Vantage**: precios ajustados (requiere API key).
-- 💰 **CoinGecko**: precios de criptomonedas (gratis).
-- 📊 **Finnhub**: métricas clave (requiere API key).
-- 🧾 **Financial Modeling Prep (FMP)**: ratios financieros (requiere API key).
-- 🧠 **Deep Translator**: para traducir resúmenes de negocios.
-- 📎 **BYMA / IAMC / Rava**: scraping de bonos argentinos.
-
----
-
-## 🧠 Puntuación Inteligente
-
-Cada activo recibe una calificación del 1 al 5 basada en:
-- Beta
-- Deuda/Equidad
-- ROE / ROIC
-- EV/EBITDA
-- Yield de flujo libre
-- Ratio PEG / PER / PBR
-- Dividend Yield
-
----
-
-## 📌 Notas
-
-- Para usar Alpha Vantage, Finnhub y FMP debes definir las claves API en `.streamlit/secrets.toml`:
-```toml
-ALPHA_VANTAGE_API_KEY = "tu_api_key"
-FINNHUB_API_KEY = "tu_api_key"
-FMP_API_KEY = "tu_api_key"
-```
-
----
-
-## Créditos
-
-- [yFinance](https://pypi.org/project/yfinance/)
-- [tradingeconomics] (https://tradingeconomics.com)
-- [CoinGecko API](https://www.coingecko.com/en/api)
-- [Alpha Vantage](https://www.alphavantage.co/)
-- [Financial Modeling Prep](https://financialmodelingprep.com/)
-- [InvestPy](https://github.com/alvarobartt/investpy)
-- [Rava Bursátil](https://www.rava.com/)
-
----
-
-**Desarrollado para inversores exigentes que buscan decisiones basadas en datos.**
-
+## 🌟 Hecho con pasión por \[marcelodmartini]

@@ -4,7 +4,7 @@ import re
 from datetime import datetime
 from pycoingecko import CoinGeckoAPI
 from helpers.graficos import graficar_precio_historico, graficar_radar_scores, graficar_subida_maximo
-from helpers.score import ticker_map, obtener_pais_ticker, es_bono_argentino, calcular_score, cargar_paises_te, agregar_proyecciones_forward
+from helpers.score import ticker_map, obtener_pais_ticker, es_bono_argentino, calcular_score, cargar_paises_te, agregar_proyecciones_forward, calcular_cagr_3y, analizar_volumen, guardar_score_historico
 from helpers.yahoo import analizar_con_yfinance
 from helpers.alphavantage import analizar_con_alphavantage
 from helpers.coingecko import analizar_con_coingecko
@@ -178,6 +178,9 @@ def recomendar(score_texto, crecimiento):
     return "❌ Evitar"
 
 df_result["Recomendación"] = df_result.apply(lambda row: recomendar(row["Score Final"], row.get("Crecimiento Futuro", "")), axis=1)
+
+# Guardar histórico para backtesting
+guardar_score_historico(df_result)
 
 # Estilo visual
 def resaltar(val, mapa):

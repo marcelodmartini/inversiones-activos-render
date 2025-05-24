@@ -128,24 +128,6 @@ def calcular_bollinger(df, window=20):
     df['Bollinger Upper'] = sma + 2 * std
     return df
 
-def predecir_retorno_ml(resultado):
-    try:
-        modelo = joblib.load("modelo_retorno.pkl")
-        features = [
-            resultado.get("Beta"), resultado.get("ROE"), resultado.get("ROIC"),
-            resultado.get("PEG Ratio"), resultado.get("FCF Yield"),
-            resultado.get("P/E Ratio"), resultado.get("P/B Ratio"),
-            resultado.get("Dividend Yield"), resultado.get("Debt/Equity"),
-            resultado.get("EV/EBITDA"), resultado.get("Forward EPS"),
-            resultado.get("Forward Revenue Growth"), resultado.get("Margen Futuro"),
-            resultado.get("Score Numérico Total")
-        ]
-        if None in features:
-            return None
-        return round(modelo.predict([features])[0], 2)
-    except:
-        return None
-
 # --- Contexto y país ---
 def cargar_paises_te():
     global paises_disponibles_te
@@ -349,11 +331,11 @@ def calcular_score(resultado):
     if bonus > 0:
         justificaciones.append(f"Contexto global favorable (+{bonus})")
 
-    # Precio objetivo
+    # --- Precio objetivo ---
     try:
         actual = resultado.get("Actual")
         eps_fwd = resultado.get("Forward EPS")
-        if eps_fwd and actual:
+        if eps_fwd and eps_fwd > 0 and actual and actual > 0:
             target_base = eps_fwd * 18
             target_bull = eps_fwd * 25
             target_bear = eps_fwd * 12
@@ -361,6 +343,12 @@ def calcular_score(resultado):
             resultado["Target Alcista 12M"] = round(target_bull, 2)
             resultado["Target Conservador"] = round(target_bear, 2)
             resultado["Proyección 12M (%)"] = round((target_base - actual) / actual * 100, 2)
+        else:
+            resultado["Target Base 12M"] = None
+            resultado["Target Alcista 12M"] = None
+            resultado["Target Conservador"] = None
+            resultado["Proyección 12M (%)"] = None
+            justificaciones.append("Sin proyección por EPS negativo o datos inválidos")
     except:
         resultado["Target Base 12M"] = None
         resultado["Target Alcista 12M"] = None

@@ -275,7 +275,7 @@ try:
 except Exception as e:
     st.warning(f"No se pudo leer el RMSE: {e}")
 try:
-    st.image("modelo_histograma.png", caption="Distribución de errores del modelo (Predicción vs Real)", use_column_width=True)
+    st.image("modelo_histograma.png", caption="Distribución de errores del modelo (Predicción vs Real)", use_container_width=True)
 except Exception as e:
     st.warning(f"No se pudo cargar el histograma de errores: {e}")
 

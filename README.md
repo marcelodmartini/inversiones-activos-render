@@ -9,7 +9,7 @@ Este `README.md` explica en detalle el funcionamiento de la aplicación Streamli
 | Columna                      | Descripción                                                                        |
 | ---------------------------- | ---------------------------------------------------------------------------------- |
 | **Score Final**              | Calificación de 1 a 5 estrellas según métricas fundamentales, técnicas y contexto. |
-| **Score Numérico Total**     | Puntaje acumulado numérico basado en ~20 condiciones.                             |
+| **Score Numérico Total**     | Puntaje acumulado numérico basado en \~20 condiciones.                             |
 | **Justificación Score**      | Lista textual de los factores que aportaron al score.                              |
 | **Semáforo Riesgo**          | Riesgo del activo según su Beta: 🟢 Bajo, 🟡 Medio, 🔴 Alto.                       |
 | **Ticker**                   | Código identificador del activo (ej: AAPL, AL30D, BTC).                            |
@@ -43,66 +43,46 @@ Este `README.md` explica en detalle el funcionamiento de la aplicación Streamli
 
 ## 🧠 ¿Por qué este Score es confiable y preciso?
 
-El **Score Final (1 a 5 estrellas)** combina métricas **financieras**, **fundamentales**, **técnicas**, **estratégicas**, y **de contexto** con un modelo predictivo de retorno a 12 meses opcional usando Machine Learning:
+El **Score Final (1 a 5 estrellas)** combina métricas **financieras**, **fundamentales**, **técnicas**, **estratégicas**, y **de contexto**, más un modelo predictivo opcional:
 
-### ✅ Elementos clave
-
-* **Proyecciones Forward**: Forward EPS, crecimiento de ingresos, margen futuro.
-* **Precio objetivo estimado**: PER proyectado en escenarios conservador/base/alcista.
-* **Señales técnicas**: RSI, MACD, EMA, Bollinger Bands.
-* **Riesgo macro**: VIX + Riesgo País (desde TradingEconomics o fallback local).
-* **Penalizaciones y bonus**: Por sector cíclico, regulaciones o sector estratégico.
-* **Predicción ML (opcional)**: si se entrena un modelo con `historicos/`, se obtiene `modelo_retorno.pkl`, que estima retorno 12M basado en features reales.
+* Forward EPS, crecimiento proyectado e indicadores de margen.
+* Múltiples ratios clásicos como ROE, ROIC, PEG, EV/EBITDA, etc.
+* Análisis técnico (RSI, MACD, EMAs, Bollinger).
+* Factores macroeconómicos como VIX y Riesgo País.
+* Penalizaciones por sectores cíclicos o países con alta intervención.
+* Bonus por pertenecer a sectores estratégicos (IA, energía, defensa).
 
 ---
 
 ## 🌟 Valor agregado del modelo ML
 
-Con un archivo `modelo_retorno.pkl` entrenado sobre los scores anteriores (archivos `.csv` en `/historicos/`):
+Con un modelo entrenado (`modelo_retorno.pkl`) usando archivos anteriores en `/historicos/`:
 
-* El sistema aprende a **predecir la rentabilidad esperada a 12 meses** de nuevos activos.
-* Se utiliza `RandomForestRegressor` como modelo base por robustez y performance.
-* Input del modelo: indicadores como ROE, FCF Yield, Beta, PEG, Forward EPS, Score total, etc.
-* Output: estimación en `%` de retorno proyectado.
-* Se guarda también el RMSE del modelo (`modelo_rmse.txt`) y un histograma de errores (`modelo_histograma.png`) para análisis visual.
+* Se predice el **retorno esperado a 12 meses**.
+* Modelo: `RandomForestRegressor` (robusto y no lineal).
+* Entrenamiento validado con RMSE, MAE y R².
+* Se genera histograma de errores (`modelo_histograma.png`).
+* El score y las métricas sirven como input del modelo.
 
 ---
 
 ## 🧪 Funcionamiento paso a paso
 
-1. **Carga de datos**: el usuario sube un archivo `.csv` con tickers o se carga el último archivo histórico.
-2. **Consulta de fuentes**: se prueban múltiples APIs y fuentes (Yahoo, Alpha Vantage, CoinGecko, Investpy, BYMA) para cada ticker.
-3. **Cálculo de métricas**: se extraen más de 40 indicadores financieros, técnicos y de contexto.
-4. **Cálculo de Score**: se asigna un score numérico y textual justificado, con bonus y penalizaciones según sector y entorno.
-5. **Predicción ML (opcional)**: si hay modelo entrenado, se predice el retorno esperado a 12 meses.
-6. **Visualización**: se muestran tablas, radar de scores, gráficos de precios y métricas del modelo.
-7. **Exportación**: se guarda automáticamente el resultado como `.csv` en `/historicos/`.
-
----
-
-## 📅 Cómo usar la app
-
-1. Subí un archivo `.csv` con una columna `Ticker`.
-2. Seleccioná un rango de fechas.
-3. La app consulta varias fuentes (Yahoo, Alpha Vantage, CoinGecko, etc.).
-4. Se calculan métricas, score y proyecciones, y se guarda el resultado en `/historicos/`.
-5. Podés descargar el informe final en CSV.
-6. Podés reentrenar el modelo con un botón o automáticamente al inicio.
+1. Cargás un `.csv` con tickers.
+2. Se consultan múltiples fuentes (Yahoo, AV, CoinGecko, etc.).
+3. Se calculan indicadores financieros, técnicos y de contexto.
+4. Se asigna un **score** y proyecciones a 12 meses.
+5. Si hay modelo, se predice el retorno futuro.
+6. Todo se exporta a CSV para backtesting.
 
 ---
 
 ## 💡 Indicadores Calculados
 
-* PEG Ratio, P/E, P/B
-* ROE, ROIC, FCF Yield
-* Debt/Equity, EV/EBITDA
-* Dividend Yield, Beta
-* CAGR 3Y (Crecimiento anual compuesto)
-* Forward EPS / Revenue Growth
-* RSI, MACD, EMA50, EMA200, Bollinger Bands
-* Volumen saludable (comparado a 20 ruedas)
-* Precio objetivo (Base, Alcista, Conservador)
-* Proyección de retorno 12M (%) (ML opcional)
+* Ratios: PEG, P/E, P/B, ROE, ROIC, FCF Yield, Debt/Equity, EV/EBITDA, Dividend Yield
+* Técnicos: RSI, MACD, EMA50/200, Bollinger Bands, Volumen
+* Proyecciones: EPS, Revenue Growth, Precio objetivo (base, alcista, conservador)
+* Score final, contexto mundial, cobertura de datos
 
 ---
 
@@ -116,53 +96,59 @@ Con un archivo `modelo_retorno.pkl` entrenado sobre los scores anteriores (archi
 
 ---
 
-## ⭐ Score Financiero Final (1 a 5)
+## ⭐ Score Financiero Final
 
-| Score | Nivel     | Descripción                                         |
-| ----- | --------- | --------------------------------------------------- |
-| 5/5   | Excelente | Alta calidad, fundamentos y contexto muy favorables |
-| 4/5   | Muy Bueno | Muy buenos fundamentales y buenas proyecciones      |
-| 3/5   | Aceptable | Balanceado, pero con advertencias                   |
-| 2/5   | Riesgoso  | Fundamentos débiles, volatilidad o contexto malo    |
-| 1/5   | Débil     | Score bajo o sector desfavorable                    |
+| Score | Descripción                                          |
+| ----- | ---------------------------------------------------- |
+| 5/5   | Excelente: fundamentos y contexto muy favorables     |
+| 4/5   | Muy Bueno: sólidos fundamentos y buenas proyecciones |
+| 3/5   | Aceptable: balanceado, con advertencias              |
+| 2/5   | Riesgoso: débiles fundamentos o entorno adverso      |
+| 1/5   | Débil: fundamentos frágiles o sector desfavorable    |
 
 ---
 
 ## 🧮 Cómo se calcula el Score
 
-### Puntos positivos
+**Puntos Positivos (suman +1 cada uno):**
 
 * Beta ≤ 1
 * Debt/Equity < 1
 * EV/EBITDA < 15
 * ROE > 10%, ROIC > 8%
 * PEG < 1.5 o justificado
-* FCF Yield > 0% (+1) y > 5% (+1)
+* FCF Yield > 0% (+1 adicional si > 5%)
 * P/E < 20, P/B < 3
 * Dividend Yield > 2%
-* % Subida a Máximo > 40%
+* Subida a máximo > 40%
 * Revenue Growth YoY > 15%
-* Forward Revenue > 10%
-* EPS futuro positivo, Margen futuro > 15%
-* RSI saludable, MACD cruzado, EMA50 > EMA200, Bollinger baja
+* EPS futuro positivo, Margen > 15%
+* RSI entre 30 y 70, MACD cruzado, EMA50 > EMA200, Bollinger baja
 
-### Bonus y penalizaciones
+**Bonus:**
 
-* Contexto MUY FAVORABLE: +2 | MODERADO: +1
-* Sector estratégico: +1 (IA, defensa, energía, cloud)
-* P/E > 60 o ROE negativo: −1
-* Sector cíclico/regulatorio: −1
+* Contexto muy favorable: +2
+* Sector estratégico: +1
+
+**Penalizaciones:**
+
+* P/E > 60: −1
+* ROE < 0: −1
+* Sector cíclico/regulado: −1
 
 ---
 
 ## 📈 Backtesting y almacenamiento
 
-Todos los resultados se guardan en `./historicos/AnalisisFinal-YYYY-MM-DD_export.csv` para
-permitir backtesting o reentrenamiento del modelo ML (`modelo_retorno.pkl`).
+Los resultados se guardan en `./historicos/AnalisisFinal-YYYY-MM-DD_export.csv` para:
+
+* Visualización futura
+* Reentrenar modelos ML
+* Medir evolución de activos
 
 ---
 
-## 📦 Requisitos
+## 📦 Requisitos técnicos
 
 ```txt
 streamlit
@@ -186,12 +172,20 @@ lxml
 playwright
 tqdm
 glob2
+```
 
-🔐 Variables en .streamlit/secrets.toml
+Configurar en `.streamlit/secrets.toml`:
+
+```toml
 ALPHA_VANTAGE_API_KEY = "..."
 OPENAI_API_KEY = "..."
 TRADINGECONOMICS_API_KEY = "..."
 FINNHUB_API_KEY = "..."
 FMP_API_KEY = "..."
+```
 
-🌟 Hecho con pasión por [marcelodmartini]
+---
+
+🌟 Hecho con pasión por **\[marcelodmartini]**
+
+---

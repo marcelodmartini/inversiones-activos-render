@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import joblib
 import matplotlib.pyplot as plt
 
@@ -49,7 +49,7 @@ for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*-expor
                 continue
             ticker = fila.get("Ticker")
             actual = fila.get("Actual")
-            if pd.isna(ticker) or pd.isna(actual):
+            if pd.isna(ticker) or pd.isna(actual) or actual <= 0:
                 continue
             precio_12m = obtener_precio_a_12m(ticker, fecha_base_str)
             if precio_12m is None:
@@ -77,10 +77,12 @@ faltantes = [f for f in features_completos if f not in df_modelo.columns]
 if faltantes:
     print(f"⚠️ Advertencia: Faltan columnas en el dataset: {faltantes}")
 
-df_modelo = df_modelo.dropna(subset=features_disponibles + ["retorno_12m"])
+# Filtro extra: evitar valores negativos extremos en retorno objetivo
+df_modelo = df_modelo[df_modelo["retorno_12m"] > -100]
+
+# Entrenamiento
 X = df_modelo[features_disponibles]
 y = df_modelo["retorno_12m"]
-
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 if MODELO_ACTIVO == "rf":
@@ -93,14 +95,17 @@ else:
 modelo.fit(X_train, y_train)
 y_pred = modelo.predict(X_test)
 rmse = mean_squared_error(y_test, y_pred, squared=False)
-print(f"✅ Modelo entrenado. RMSE: {rmse:.2f}")
+mae = mean_absolute_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+print(f"✅ Modelo entrenado. RMSE: {rmse:.2f} | MAE: {mae:.2f} | R2: {r2:.2f}")
 
 joblib.dump(modelo, ARCHIVO_SALIDA_MODELO)
 print(f"📁 Modelo guardado en: {ARCHIVO_SALIDA_MODELO}")
 
 # Guardar RMSE
 with open(ARCHIVO_SALIDA_RMSE, "w") as f:
-    f.write(f"{rmse:.2f}")
+    f.write(f"RMSE: {rmse:.2f}\nMAE: {mae:.2f}\nR2: {r2:.2f}")
 
 # Histograma de errores
 errores = y_test - y_pred

@@ -16,7 +16,6 @@ ARCHIVO_SALIDA_MODELO = "modelo_retorno.pkl"
 ARCHIVO_SALIDA_RMSE = "modelo_rmse.txt"
 ARCHIVO_HISTOGRAMA = "modelo_histograma.png"
 MODELO_ACTIVO = "rf"  # "lr" para LinearRegression, "rf" para RandomForest
-MIN_FEATURES_PERMISIVOS = 8  # umbral más flexible
 
 features_completos = [
     "Beta", "ROE", "ROIC", "PEG Ratio", "FCF Yield", "P/E Ratio", "P/B Ratio",
@@ -44,6 +43,9 @@ for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*-expor
         fecha_base_str = os.path.basename(archivo).split("-")[1]
         df = pd.read_csv(archivo)
         print(f"📄 Procesando archivo: {archivo} (Filas: {len(df)})")
+        print("→ NaNs por columna:")
+        print(df[features_completos].isna().sum())
+
         for _, fila in df.iterrows():
             if fila.get("Tipo") == "Bono":
                 continue
@@ -56,13 +58,9 @@ for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*-expor
                 print(f"🔸 Sin precio futuro para {ticker}")
                 continue
             retorno_12m = (precio_12m - actual) / actual * 100
-            fila_features = {col: fila.get(col) for col in features_completos if col in fila}
-            completitud = sum(pd.notna(list(fila_features.values())))
-            if completitud >= MIN_FEATURES_PERMISIVOS:
-                fila_features["retorno_12m"] = retorno_12m
-                datos.append(fila_features)
-            else:
-                print(f"🔸 {ticker} descartado (completitud muy baja: {completitud}/{len(features_completos)})")
+            fila_features = {col: fila.get(col) for col in features_completos}
+            fila_features["retorno_12m"] = retorno_12m
+            datos.append(fila_features)
     except Exception as e:
         print(f"⚠️ Error procesando {archivo}: {e}")
 
@@ -72,22 +70,20 @@ print(f"✅ Registros válidos para entrenamiento: {len(df_modelo)}")
 if df_modelo.empty:
     raise ValueError("❌ No se pudo generar dataset de entrenamiento válido. Verificá los archivos en /historicos/")
 
-features_disponibles = [f for f in features_completos if f in df_modelo.columns]
-faltantes = [f for f in features_completos if f not in df_modelo.columns]
-if faltantes:
-    print(f"⚠️ Advertencia: Faltan columnas en el dataset: {faltantes}")
+# Verificar cobertura antes de imputar
+print("→ Filas con al menos 8 columnas completas:", (df_modelo[features_completos].notna().sum(axis=1) >= 8).sum())
 
 # Filtro extra: evitar valores negativos extremos en retorno objetivo
 df_modelo = df_modelo[df_modelo["retorno_12m"] > -100]
 
 # Imputación con la media
-for col in features_disponibles:
-    if df_modelo[col].isnull().any():
+for col in features_completos:
+    if col in df_modelo.columns and df_modelo[col].isnull().any():
         media_col = df_modelo[col].mean()
         df_modelo[col] = df_modelo[col].fillna(media_col)
 
 # Entrenamiento
-X = df_modelo[features_disponibles]
+X = df_modelo[features_completos]
 y = df_modelo["retorno_12m"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
@@ -105,13 +101,16 @@ mae = mean_absolute_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 
 print(f"✅ Modelo entrenado. RMSE: {rmse:.2f} | MAE: {mae:.2f} | R2: {r2:.2f}")
-
 joblib.dump(modelo, ARCHIVO_SALIDA_MODELO)
 print(f"📁 Modelo guardado en: {ARCHIVO_SALIDA_MODELO}")
 
 # Guardar RMSE
-with open(ARCHIVO_SALIDA_RMSE, "w") as f:
-    f.write(f"RMSE: {rmse:.2f}\nMAE: {mae:.2f}\nR2: {r2:.2f}")
+try:
+    with open(ARCHIVO_SALIDA_RMSE, "w") as f:
+        f.write(f"RMSE: {rmse:.2f}\nMAE: {mae:.2f}\nR2: {r2:.2f}")
+    print(f"📄 RMSE guardado en: {ARCHIVO_SALIDA_RMSE}")
+except Exception as e:
+    print(f"❌ Error al guardar RMSE: {e}")
 
 # Histograma de errores
 errores = y_test - y_pred
@@ -122,5 +121,13 @@ plt.xlabel("Error de predicción")
 plt.ylabel("Frecuencia")
 plt.grid(True)
 plt.tight_layout()
-plt.savefig(ARCHIVO_HISTOGRAMA)
-print(f"📊 Histograma guardado en: {ARCHIVO_HISTOGRAMA}")
+try:
+    plt.savefig(ARCHIVO_HISTOGRAMA)
+    print(f"📊 Histograma guardado en: {ARCHIVO_HISTOGRAMA}")
+except Exception as e:
+    print(f"❌ Error al guardar histograma: {e}")
+
+# Path útil
+print("📂 Path actual:", os.getcwd())
+print("📂 RMSE file path:", os.path.abspath(ARCHIVO_SALIDA_RMSE))
+print("📂 Histograma file path:", os.path.abspath(ARCHIVO_HISTOGRAMA))

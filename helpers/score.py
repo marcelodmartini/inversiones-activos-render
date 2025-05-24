@@ -50,181 +50,6 @@ def es_bono_argentino(ticker):
         ]
     ])
 
-# --- Función para calcular CAGR histórico de 3 años ---
-def calcular_cagr_3y(df):
-    try:
-        if df.shape[0] >= 756:
-            inicial = df['Close'].iloc[-756]
-            final = df['Close'].iloc[-1]
-            cagr = (final / inicial) ** (1 / 3) - 1
-            return round(cagr * 100, 2)
-    except:
-        pass
-    return None
-
-# --- Análisis de volumen promedio ---
-def analizar_volumen(df):
-    try:
-        vol_actual = df['Volume'].iloc[-1]
-        vol_prom = df['Volume'].rolling(20).mean().iloc[-1]
-        return vol_actual > vol_prom
-    except:
-        return False
-
-# --- Guardar scoring histórico para backtesting ---
-def guardar_score_historico(df_result):
-    fecha_actual = datetime.now().strftime("%Y-%m-%d")
-    nombre_archivo = f"AnalisisFinal-{fecha_actual}_export.csv"
-    path = os.path.join("historicos", nombre_archivo)
-    os.makedirs("historicos", exist_ok=True)
-    df_result.to_csv(path, index=False)
-    print(f"Score guardado en {path}")
-
-# --- Predicción de retorno con ML ---
-def predecir_retorno_ml(resultado):
-    try:
-        modelo = joblib.load("modelo_retorno.pkl")
-        features = [
-            resultado.get("Beta"), resultado.get("ROE"), resultado.get("ROIC"),
-            resultado.get("PEG Ratio"), resultado.get("FCF Yield"),
-            resultado.get("P/E Ratio"), resultado.get("P/B Ratio"),
-            resultado.get("Dividend Yield"), resultado.get("Debt/Equity"),
-            resultado.get("EV/EBITDA"), resultado.get("Forward EPS"),
-            resultado.get("Forward Revenue Growth"), resultado.get("Margen Futuro"),
-            resultado.get("Score Numérico Total")
-        ]
-        if None in features:
-            return None
-        return round(modelo.predict([features])[0], 2)
-    except:
-        return None
-
-# --- Indicadores técnicos ---
-def calcular_rsi(df, window=14):
-    delta = df['Close'].diff()
-    gain = delta.clip(lower=0)
-    loss = -delta.clip(upper=0)
-    avg_gain = gain.rolling(window=window).mean()
-    avg_loss = loss.rolling(window=window).mean()
-    rs = avg_gain / avg_loss
-    return 100 - (100 / (1 + rs))
-
-def calcular_macd(df, short=12, long=26, signal=9):
-    ema_short = df['Close'].ewm(span=short, adjust=False).mean()
-    ema_long = df['Close'].ewm(span=long, adjust=False).mean()
-    macd = ema_short - ema_long
-    signal_line = macd.ewm(span=signal, adjust=False).mean()
-    return macd, signal_line
-
-def calcular_ema(df):
-    df['EMA50'] = df['Close'].ewm(span=50, adjust=False).mean()
-    df['EMA200'] = df['Close'].ewm(span=200, adjust=False).mean()
-    return df
-
-def calcular_bollinger(df, window=20):
-    sma = df['Close'].rolling(window).mean()
-    std = df['Close'].rolling(window).std()
-    df['Bollinger Lower'] = sma - 2 * std
-    df['Bollinger Upper'] = sma + 2 * std
-    return df
-
-# --- Contexto y país ---
-def cargar_paises_te():
-    global paises_disponibles_te
-    try:
-        te.login(TRADINGECONOMICS_API_KEY)
-        url = f"https://api.tradingeconomics.com/country?c={TRADINGECONOMICS_API_KEY}"
-        r = requests.get(url)
-        if r.status_code == 200:
-            paises_disponibles_te = {p["country"].lower() for p in r.json()}
-    except:
-        paises_disponibles_te = set()
-
-def obtener_pais_ticker(ticker):
-    ticker_ = ticker_map.get(ticker.upper(), ticker.upper())
-    try:
-        info = yf.Ticker(ticker_).info
-        pais = info.get("country", "").lower()
-        return mapa_paises_yf.get(pais, pais) or "default"
-    except:
-        return "default"
-
-def obtener_riesgo_pais(pais):
-    if not paises_disponibles_te:
-        cargar_paises_te()
-    pais = pais.lower()
-    if pais not in paises_disponibles_te:
-        return riesgo_pais_por_pais.get(pais, riesgo_pais_por_pais["default"])
-    try:
-        df = te.getIndicatorData(country=pais, output_type="df")
-        df = df[df["Category"].str.lower().str.contains("bond|risk")]
-        if not df.empty:
-            return round(float(df.iloc[0]["Value"]))
-    except:
-        pass
-    return riesgo_pais_por_pais.get(pais, riesgo_pais_por_pais["default"])
-
-sectores_ciclicos = ["consumer discretionary", "financial", "industrials", "real estate"]
-riesgos_regulatorios = {
-    "argentina": ["bank", "financiera", "banco"],
-    "venezuela": ["petrol", "energy"],
-    "china": ["tech", "internet"]
-}
-
-def penalizacion_sectorial(pais, sector):
-    sector = sector.lower()
-    penalizacion = 0
-    if any(sc in sector for sc in sectores_ciclicos):
-        penalizacion -= 1
-    if pais in riesgos_regulatorios:
-        if any(r in sector for r in riesgos_regulatorios[pais]):
-            penalizacion -= 1
-    return penalizacion
-
-def obtener_contexto_mundial(ticker):
-    try:
-        vix = yf.Ticker("^VIX").history("5d")["Close"].dropna().iloc[-1]
-        pais = obtener_pais_ticker(ticker)
-        riesgo = obtener_riesgo_pais(pais)
-        if vix < 18 and riesgo < 500:
-            return "Contexto Global: MUY FAVORABLE", 2
-        elif vix < 25 and riesgo < 1000:
-            return "Contexto Global: MODERADO", 1
-        else:
-            return "Contexto Global: ADVERSO", 0
-    except:
-        return "Contexto Global: DESCONOCIDO", 0
-
-# --- Proyección y sector ---
-def agregar_proyecciones_forward(resultado, ticker_map):
-    ticker = resultado.get("Ticker", "")
-    ticker_ = ticker_map.get(ticker.upper(), ticker.upper())
-    try:
-        info = yf.Ticker(ticker_).info
-        forward_eps = info.get("forwardEps")
-        forward_rev_growth = info.get("revenueGrowth")
-        margin_future = info.get("netMargins")
-        sector = info.get("sector")
-        resultado["Forward EPS"] = forward_eps
-        resultado["Forward Revenue Growth"] = forward_rev_growth * 100 if forward_rev_growth else None
-        resultado["Margen Futuro"] = margin_future
-        resultado["Sector"] = sector
-        if forward_rev_growth:
-            if forward_rev_growth >= 0.15:
-                resultado["Crecimiento Futuro"] = "🟢 Alto"
-            elif forward_rev_growth >= 0.05:
-                resultado["Crecimiento Futuro"] = "🟡 Moderado"
-            else:
-                resultado["Crecimiento Futuro"] = "🔴 Bajo"
-        else:
-            resultado["Crecimiento Futuro"] = "🔴 Bajo"
-    except:
-        resultado["Forward EPS"] = None
-        resultado["Forward Revenue Growth"] = None
-        resultado["Margen Futuro"] = None
-        resultado["Crecimiento Futuro"] = "🔴 Bajo"
-    return resultado
-
 # --- Cálculo de Score ---
 def calcular_score(resultado):
     if resultado.get("Tipo") == "Bono":
@@ -283,11 +108,16 @@ def calcular_score(resultado):
         score += 1
         justificaciones.append("Margen futuro saludable")
 
-    # Técnicos (sin cambios)
+    # Técnicos: procesar DataFrame correctamente
     try:
         hist = resultado.get("Hist")
+        df = None
         if isinstance(hist, dict):
             df = pd.DataFrame(hist)
+        elif isinstance(hist, pd.DataFrame):
+            df = hist.copy()
+
+        if df is not None and not df.empty and "Close" in df.columns:
             df = calcular_ema(df)
             df = calcular_bollinger(df)
             df["RSI"] = calcular_rsi(df)
@@ -300,8 +130,10 @@ def calcular_score(resultado):
             if macd > signal: score += 1; justificaciones.append("MACD cruzado")
             if df["EMA50"].iloc[-1] > df["EMA200"].iloc[-1]: score += 1; justificaciones.append("Tendencia EMA positiva")
             if precio < df["Bollinger Lower"].iloc[-1]: score += 1; justificaciones.append("En banda inferior Bollinger")
+        else:
+            resultado["Advertencia"] = "⚠️ Historial no válido para indicadores técnicos"
     except:
-        pass
+        resultado["Advertencia"] = "⚠️ Error procesando el historial técnico"
 
     # Penalizaciones
     if (pe := resultado.get("P/E Ratio")) and pe > 60:

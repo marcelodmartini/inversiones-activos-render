@@ -6,7 +6,7 @@ import time as time_module  # para sleep
 def analizar_con_investpy(nombre, pais, fecha_inicio, fecha_fin, reintentos=2, espera=1.5):
     """
     Analiza un activo usando Investpy, devolviendo métricas básicas y el histórico.
-    
+
     Args:
         nombre (str): Nombre del activo según Investpy (ej: 'YPF')
         pais (str): País del activo (ej: 'argentina')
@@ -14,7 +14,7 @@ def analizar_con_investpy(nombre, pais, fecha_inicio, fecha_fin, reintentos=2, e
         fecha_fin (datetime.date): Fecha de fin
         reintentos (int): Cantidad de reintentos si falla la descarga
         espera (float): Segundos entre reintentos
-    
+
     Returns:
         dict | None: Diccionario con métricas y dataframe 'Hist' o None si falla.
     """
@@ -34,18 +34,26 @@ def analizar_con_investpy(nombre, pais, fecha_inicio, fecha_fin, reintentos=2, e
                 warnings.warn(f"[Investpy] Datos vacíos o mal formateados para {nombre} ({pais})")
                 return None
 
+            # Asegurar índice datetime
+            if not df.index.inferred_type.startswith("datetime"):
+                df.index = pd.to_datetime(df.index)
+
             min_price = df['Close'].min()
             max_price = df['Close'].max()
             current_price = df['Close'].iloc[-1]
-            subida = (max_price - current_price) / current_price * 100 if current_price else 0
+
+            if pd.isna(current_price) or current_price <= 0:
+                subida = None
+            else:
+                subida = (max_price - current_price) / current_price * 100
 
             return {
                 "Ticker": nombre,
                 "Fuente": f"Investpy ({pais})",
-                "Mínimo": round(min_price, 2),
-                "Máximo": round(max_price, 2),
-                "Actual": round(current_price, 2),
-                "% Subida a Máx": round(subida, 2),
+                "Mínimo": round(min_price, 2) if pd.notna(min_price) else None,
+                "Máximo": round(max_price, 2) if pd.notna(max_price) else None,
+                "Actual": round(current_price, 2) if pd.notna(current_price) else None,
+                "% Subida a Máx": round(subida, 2) if subida is not None else None,
                 "Hist": df
             }
 

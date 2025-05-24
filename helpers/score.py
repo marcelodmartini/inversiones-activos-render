@@ -32,6 +32,24 @@ ticker_map = {
 
 paises_disponibles_te = set()
 
+# --- Función para detectar bonos argentinos ---
+def es_bono_argentino(ticker):
+    ticker = ticker.upper()
+    return any([
+        ticker.endswith("D"),
+        ticker.startswith("AL"),
+        ticker.startswith("GD"),
+        ticker.startswith("AE"),
+        ticker.startswith("TO"),
+        ticker.startswith("TV"),
+        ticker in [
+            "AA22", "AA26", "AL29", "AL30", "AL35", "AL41", "AL44", "AL50",
+            "BA37", "BA75", "BPLDD", "BPLDC", "DICA", "DICY", "PARY", "PBA25",
+            "PBA26", "PBA37", "PBD19", "PBJ25", "PBY22", "PR13", "PR15", "PR17",
+            "TV23", "TV24", "TV25", "TV26", "TV27", "TV28", "TV29", "TV30", "TVPP"
+        ]
+    ])
+
 # --- Función para calcular CAGR histórico de 3 años ---
 def calcular_cagr_3y(df):
     try:

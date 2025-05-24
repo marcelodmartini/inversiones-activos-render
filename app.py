@@ -36,7 +36,7 @@ def recomendar(score_texto, crecimiento):
         return "🙀 Revisar"
     return "❌ Evitar"
 
-def obtener_csv_mas_reciente(patron="historicos/AnalisisFinal-*-export.csv"):
+def obtener_csv_mas_reciente(patron="historicos/AnalisisFinal-*_export.csv"):
     archivos = glob.glob(patron)
     return sorted(archivos, key=os.path.getmtime, reverse=True)[0] if archivos else None
 

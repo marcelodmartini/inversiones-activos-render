@@ -38,7 +38,7 @@ def obtener_precio_a_12m(ticker, fecha_base_str):
 
 # Cargar todos los CSV de historicos y generar dataset
 datos = []
-for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*-export.csv")):
+for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*_export.csv")):
     try:
         fecha_base_str = os.path.basename(archivo).split("-")[1]
         df = pd.read_csv(archivo)

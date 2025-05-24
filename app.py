@@ -173,6 +173,9 @@ with st.spinner("Analizando activos..."):
         if "Tipo" not in resultado or resultado["Tipo"] == "Desconocido":
             resultado["Tipo"] = "Bono" if es_bono else "Acción"
 
+        if "Sector" not in resultado or resultado["Sector"] is None:
+            resultado["Sector"] = ""
+
         score_texto, score_numerico = calcular_score(resultado)
         resultado["Score Final"] = score_texto
         resultado["__orden_score"] = score_numerico

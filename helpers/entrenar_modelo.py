@@ -16,6 +16,7 @@ ARCHIVO_SALIDA_MODELO = "modelo_retorno.pkl"
 ARCHIVO_SALIDA_RMSE = "modelo_rmse.txt"
 ARCHIVO_HISTOGRAMA = "modelo_histograma.png"
 MODELO_ACTIVO = "rf"  # "lr" para LinearRegression, "rf" para RandomForest
+MIN_FEATURES_REQUERIDOS = 12
 
 features_completos = [
     "Beta", "ROE", "ROIC", "PEG Ratio", "FCF Yield", "P/E Ratio", "P/B Ratio",
@@ -51,10 +52,10 @@ for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*-expor
             precio_12m = obtener_precio_a_12m(ticker, fecha_base_str)
             if precio_12m is None:
                 continue
+            retorno_12m = (precio_12m - actual) / actual * 100
             fila_features = {col: fila.get(col) for col in features_completos if col in fila}
-            cantidad_validos = sum(pd.notna(list(fila_features.values())))
-            if cantidad_validos >= 10:
-                fila_features["retorno_12m"] = (precio_12m - actual) / actual * 100
+            if sum(pd.notna(list(fila_features.values()))) >= MIN_FEATURES_REQUERIDOS:
+                fila_features["retorno_12m"] = retorno_12m
                 datos.append(fila_features)
     except Exception as e:
         print(f"⚠️ Error procesando {archivo}: {e}")
@@ -62,14 +63,14 @@ for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*-expor
 # Entrenamiento
 df_modelo = pd.DataFrame(datos)
 if df_modelo.empty:
-    print("⚠️ Advertencia: No se generaron suficientes datos válidos para entrenar el modelo.")
-    exit(0)
+    raise ValueError("❌ No se pudo generar dataset de entrenamiento válido. Verificá los archivos en /historicos/")
 
 features_disponibles = [f for f in features_completos if f in df_modelo.columns]
 faltantes = [f for f in features_completos if f not in df_modelo.columns]
 if faltantes:
     print(f"⚠️ Advertencia: Faltan columnas y se entrenará con menos features: {faltantes}")
 
+df_modelo = df_modelo.dropna(subset=features_disponibles + ["retorno_12m"])
 X = df_modelo[features_disponibles]
 y = df_modelo["retorno_12m"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)

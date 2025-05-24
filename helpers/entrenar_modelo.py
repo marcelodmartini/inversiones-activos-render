@@ -43,6 +43,7 @@ for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*-expor
     try:
         fecha_base_str = os.path.basename(archivo).split("-")[1]
         df = pd.read_csv(archivo)
+        print(f"📄 Procesando archivo: {archivo} (Filas: {len(df)})")
         for _, fila in df.iterrows():
             if fila.get("Tipo") == "Bono":
                 continue
@@ -52,16 +53,19 @@ for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*-expor
                 continue
             precio_12m = obtener_precio_a_12m(ticker, fecha_base_str)
             if precio_12m is None:
+                print(f"🔸 Sin precio futuro para {ticker}")
                 continue
             retorno_12m = (precio_12m - actual) / actual * 100
             fila_features = {col: fila.get(col) for col in features_completos if col in fila}
-            if sum(pd.notna(list(fila_features.values()))) >= MIN_FEATURES_REQUERIDOS:
+            completitud = sum(pd.notna(list(fila_features.values())))
+            if completitud >= MIN_FEATURES_REQUERIDOS:
                 fila_features["retorno_12m"] = retorno_12m
                 datos.append(fila_features)
+            else:
+                print(f"🔸 {ticker} descartado por features incompletos ({completitud}/{len(features_completos)})")
     except Exception as e:
         print(f"⚠️ Error procesando {archivo}: {e}")
 
-# Entrenamiento
 df_modelo = pd.DataFrame(datos)
 print(f"✅ Registros válidos para entrenamiento: {len(df_modelo)}")
 
@@ -71,11 +75,12 @@ if df_modelo.empty:
 features_disponibles = [f for f in features_completos if f in df_modelo.columns]
 faltantes = [f for f in features_completos if f not in df_modelo.columns]
 if faltantes:
-    print(f"⚠️ Advertencia: Faltan columnas y se entrenará con menos features: {faltantes}")
+    print(f"⚠️ Advertencia: Faltan columnas en el dataset: {faltantes}")
 
 df_modelo = df_modelo.dropna(subset=features_disponibles + ["retorno_12m"])
 X = df_modelo[features_disponibles]
 y = df_modelo["retorno_12m"]
+
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 if MODELO_ACTIVO == "rf":

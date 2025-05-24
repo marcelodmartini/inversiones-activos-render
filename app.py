@@ -22,14 +22,13 @@ import openai
 import glob
 import os
 import subprocess
-from pandas.io.formats.style import Styler
 
 log_info("La app inició correctamente")
 cargar_paises_te()
 st.set_page_config(page_title="Análisis Financiero IA", layout="wide")
 
 def recomendar(score_texto, crecimiento):
-    match = re.search(r"(\\d+)/5", str(score_texto))
+    match = re.search(r"(\d+)/5", str(score_texto))
     score_valor = int(match.group(1)) if match else 0
     if score_valor >= 4:
         return "✅ Comprar"
@@ -47,12 +46,6 @@ if st.sidebar.button("🔁 Reentrenar modelo manualmente"):
         st.sidebar.success("✅ Modelo reentrenado exitosamente.")
     except Exception as e:
         st.sidebar.error(f"❌ Error al reentrenar el modelo: {e}")
-
-try:
-    subprocess.run(["python", "helpers/entrenar_modelo.py"], check=True)
-    log_info("Modelo reentrenado automáticamente")
-except Exception as e:
-    log_error(f"Error al reentrenar el modelo automáticamente: {e}")
 
 if "debug_logs" not in st.session_state:
     st.session_state.debug_logs = []
@@ -113,15 +106,6 @@ if st.button("Consultar IA") and prompt.strip():
 cg = CoinGeckoAPI()
 errores_conexion, resultados = [], []
 criptos_disponibles = [c['id'] for c in cg.get_coins_list()]
-
-def recomendar(score_texto, crecimiento):
-    match = re.search(r"(\\d+)/5", str(score_texto))
-    score_valor = int(match.group(1)) if match else 0
-    if score_valor >= 4:
-        return "✅ Comprar"
-    elif score_valor == 3 and crecimiento in ["🟢 Alto", "🟡 Moderado"]:
-        return "🙀 Revisar"
-    return "❌ Evitar"
 
 with st.spinner("Analizando activos..."):
     for raw_ticker in df_input['Ticker']:
@@ -201,6 +185,9 @@ with st.spinner("Analizando activos..."):
         resultados.append(resultado)
 
 df_result = pd.DataFrame(resultados)
+if df_result.empty:
+    st.warning("⚠️ No se pudo generar ningún análisis con los tickers proporcionados.")
+    st.stop()
 df_result = df_result.sort_values("__orden_score", ascending=False).drop(columns="__orden_score")
 df_result["Recomendación"] = df_result.apply(lambda row: recomendar(row["Score Final"], row.get("Crecimiento Futuro", "")), axis=1)
 
@@ -225,6 +212,9 @@ tooltips = {
     "Beta": "Volatilidad respecto al mercado",
     "Recomendación": "Sugerencia basada en el análisis integral"
 }
+
+if 'Hist' in df_result.columns:
+    df_result = df_result.drop(columns=['Hist'])
 
 st.dataframe(
     df_result,

@@ -1,5 +1,3 @@
-# mejoras_calculo_score.py (versión extendida con mejoras avanzadas)
-
 import re
 import yfinance as yf
 import tradingeconomics as te
@@ -37,7 +35,7 @@ paises_disponibles_te = set()
 # --- Función para calcular CAGR histórico de 3 años ---
 def calcular_cagr_3y(df):
     try:
-        if df.shape[0] >= 756:  # 252 trading days * 3 años
+        if df.shape[0] >= 756:
             inicial = df['Close'].iloc[-756]
             final = df['Close'].iloc[-1]
             cagr = (final / inicial) ** (1 / 3) - 1
@@ -64,15 +62,26 @@ def guardar_score_historico(df_result):
     df_result.to_csv(path, index=False)
     print(f"Score guardado en {path}")
 
-# --- Predicción de retorno con ML (placeholder simple) ---
-def predecir_retorno_ml(caracteristicas):
+# --- Predicción de retorno con ML ---
+def predecir_retorno_ml(resultado):
     try:
-        modelo = joblib.load("modelo_retorno.pkl")  # entrenado externamente
-        return modelo.predict([caracteristicas])[0]
+        modelo = joblib.load("modelo_retorno.pkl")
+        features = [
+            resultado.get("Beta"), resultado.get("ROE"), resultado.get("ROIC"),
+            resultado.get("PEG Ratio"), resultado.get("FCF Yield"),
+            resultado.get("P/E Ratio"), resultado.get("P/B Ratio"),
+            resultado.get("Dividend Yield"), resultado.get("Debt/Equity"),
+            resultado.get("EV/EBITDA"), resultado.get("Forward EPS"),
+            resultado.get("Forward Revenue Growth"), resultado.get("Margen Futuro"),
+            resultado.get("Score Numérico Total")
+        ]
+        if None in features:
+            return None
+        return round(modelo.predict([features])[0], 2)
     except:
         return None
 
-# --- Técnicos ---
+# --- Indicadores técnicos ---
 def calcular_rsi(df, window=14):
     delta = df['Close'].diff()
     gain = delta.clip(lower=0)
@@ -97,11 +106,27 @@ def calcular_ema(df):
 def calcular_bollinger(df, window=20):
     sma = df['Close'].rolling(window).mean()
     std = df['Close'].rolling(window).std()
-    upper = sma + 2 * std
-    lower = sma - 2 * std
-    df['Bollinger Lower'] = lower
-    df['Bollinger Upper'] = upper
+    df['Bollinger Lower'] = sma - 2 * std
+    df['Bollinger Upper'] = sma + 2 * std
     return df
+
+def predecir_retorno_ml(resultado):
+    try:
+        modelo = joblib.load("modelo_retorno.pkl")
+        features = [
+            resultado.get("Beta"), resultado.get("ROE"), resultado.get("ROIC"),
+            resultado.get("PEG Ratio"), resultado.get("FCF Yield"),
+            resultado.get("P/E Ratio"), resultado.get("P/B Ratio"),
+            resultado.get("Dividend Yield"), resultado.get("Debt/Equity"),
+            resultado.get("EV/EBITDA"), resultado.get("Forward EPS"),
+            resultado.get("Forward Revenue Growth"), resultado.get("Margen Futuro"),
+            resultado.get("Score Numérico Total")
+        ]
+        if None in features:
+            return None
+        return round(modelo.predict([features])[0], 2)
+    except:
+        return None
 
 # --- Contexto y país ---
 def cargar_paises_te():
@@ -297,10 +322,34 @@ def calcular_score(resultado):
     resultado["Contexto Global"] = contexto
     score += bonus
     if bonus > 0: justificaciones.append(f"Contexto global favorable (+{bonus})")
+    # --- NUEVO: Cálculo de proyecciones de precio objetivo ---
+    try:
+        actual = resultado.get("Actual")
+        eps_fwd = resultado.get("Forward EPS")
+        if eps_fwd and actual:
+            target_base = eps_fwd * 18
+            target_bull = eps_fwd * 25
+            target_bear = eps_fwd * 12
+            resultado["Target Base 12M"] = round(target_base, 2)
+            resultado["Target Alcista 12M"] = round(target_bull, 2)
+            resultado["Target Conservador"] = round(target_bear, 2)
+            resultado["Proyección 12M (%)"] = round((target_base - actual) / actual * 100, 2)
+    except:
+        resultado["Target Base 12M"] = None
+        resultado["Target Alcista 12M"] = None
+        resultado["Target Conservador"] = None
+        resultado["Proyección 12M (%)"] = None
+
     resultado["Score Numérico Total"] = score
     resultado["Justificación Score"] = justificaciones
-    if score >= 13: return "⭐⭐⭐⭐⭐ (5/5 - Excelente)", 5
-    elif score >= 10: return "⭐⭐⭐⭐ (4/5 - Muy Bueno)", 4
-    elif score >= 7: return "⭐⭐⭐ (3/5 - Aceptable)", 3
-    elif score >= 4: return "⭐⭐ (2/5 - Riesgoso)", 2
-    else: return "⭐ (1/5 - Débil)", 1
+
+    if score >= 13:
+        return "⭐⭐⭐⭐⭐ (5/5 - Excelente)", 5
+    elif score >= 10:
+        return "⭐⭐⭐⭐ (4/5 - Muy Bueno)", 4
+    elif score >= 7:
+        return "⭐⭐⭐ (3/5 - Aceptable)", 3
+    elif score >= 4:
+        return "⭐⭐ (2/5 - Riesgoso)", 2
+    else:
+        return "⭐ (1/5 - Débil)", 1

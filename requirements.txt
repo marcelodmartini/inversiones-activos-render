@@ -2,11 +2,9 @@
 # CORE
 # ------------------------------
 streamlit>=1.30.0
-pandas>=2.2.0
+pandas<2.2.0          # Compatible con investpy
 numpy>=1.24.0
 requests>=2.31.0
-python-dotenv>=1.0.1
-certifi>=2024.2.2
 
 # ------------------------------
 # VISUALIZACIÓN
@@ -15,7 +13,7 @@ matplotlib>=3.8.0
 plotly>=5.20.0
 
 # ------------------------------
-# PARSING Y WEB
+# PARSING Y WEB SCRAPING
 # ------------------------------
 beautifulsoup4>=4.12.0
 lxml>=5.1.0
@@ -29,10 +27,22 @@ yfinance>=0.2.36
 pycoingecko>=3.1.0
 alpha_vantage>=2.3.1
 investpy>=1.0.8
-tradingeconomics>=0.2.2  # ⚠️ Verificá si usás esta lib, ya que no fue llamada explícitamente en tu código.
+tradingeconomics>=0.2.2
 
 # ------------------------------
 # NLP Y TRADUCCIÓN
 # ------------------------------
 openai>=1.0.0
 deep-translator>=1.11.4
+
+# ------------------------------
+# MACHINE LEARNING
+# ------------------------------
+scikit-learn>=1.4.0
+joblib>=1.3.0
+
+# ------------------------------
+# OPCIONAL / EXPERIMENTAL
+# ------------------------------
+# seaborn>=0.13.0        # Visualizaciones estadísticas
+# streamlit-extras>=0.3.3  # Componentes avanzados de Streamlit

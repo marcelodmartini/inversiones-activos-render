@@ -17,10 +17,17 @@ from config import ES_CLOUD, ALPHA_VANTAGE_API_KEY, OPENAI_API_KEY
 import openai
 import glob
 import os
+import subprocess
 from pandas.io.formats.style import Styler
 
 log_info("La app inició correctamente")
 cargar_paises_te()
+
+try:
+    subprocess.run(["python", "helpers/entrenar_modelo.py"], check=True)
+    log_info("Modelo reentrenado automáticamente")
+except Exception as e:
+    log_error(f"Error al reentrenar el modelo automáticamente: {e}")
 
 def obtener_csv_mas_reciente(patron="AnalisisFinal-*-export.csv"):
     archivos = glob.glob(patron)
@@ -57,7 +64,6 @@ else:
     st.error("❌ No se cargó ningún archivo CSV válido.")
     st.stop()
 
-# Asistente financiero OpenAI
 client = openai.OpenAI(api_key=OPENAI_API_KEY)
 st.header("💬 Chat con IA Financiera (OpenAI)")
 prompt = st.text_area("Escribí tu consulta para ChatGPT", placeholder="Ej: ¿Conviene invertir en bonos ajustados por CER o en acciones energéticas?")
@@ -82,7 +88,6 @@ if st.button("Consultar IA") and prompt.strip():
         except Exception as e:
             st.error(f"Error al contactar a OpenAI: {e}")
 
-# Análisis de activos
 cg = CoinGeckoAPI()
 errores_conexion, resultados = [], []
 criptos_disponibles = [c['id'] for c in cg.get_coins_list()]
@@ -91,7 +96,6 @@ with st.spinner("Analizando activos..."):
     for raw_ticker in df_input['Ticker']:
         if pd.isna(raw_ticker) or not str(raw_ticker).strip():
             continue
-
         fuentes_probadas = []
         raw_ticker = str(raw_ticker).strip()
         ticker_clean = raw_ticker.upper()
@@ -159,55 +163,43 @@ with st.spinner("Analizando activos..."):
         resultado["__orden_score"] = score_numerico
         resultados.append(resultado)
 
-# Crear DataFrame final
 df_result = pd.DataFrame(resultados)
 df_result = df_result.sort_values("__orden_score", ascending=False).drop(columns="__orden_score")
 
-# Columnas prioritarias
-col_prio = ["Ticker", "Semáforo Riesgo", "Crecimiento Futuro", "Cobertura", "Score Final", "% Subida a Máx", "Beta", "País"]
-df_result = df_result[[col for col in col_prio if col in df_result.columns] + [c for c in df_result.columns if c not in col_prio]]
-
-# Recomendación inteligente
 def recomendar(score_texto, crecimiento):
     match = re.search(r"(\d+)/5", str(score_texto))
     score_valor = int(match.group(1)) if match else 0
     if score_valor >= 4:
         return "✅ Comprar"
     elif score_valor == 3 and crecimiento in ["🟢 Alto", "🟡 Moderado"]:
-        return "👀 Revisar"
+        return "🙀 Revisar"
     return "❌ Evitar"
 
 df_result["Recomendación"] = df_result.apply(lambda row: recomendar(row["Score Final"], row.get("Crecimiento Futuro", "")), axis=1)
-
-# Guardar histórico para backtesting
 guardar_score_historico(df_result)
 
-# Estilo visual
-def resaltar(val, mapa):
-    return f"background-color: {mapa.get(val, '#eeeeee')}; font-weight: bold" if isinstance(val, str) else ""
+tooltips = {
+    "Ticker": "Símbolo del activo",
+    "Semáforo Riesgo": "Nivel de riesgo basado en la volatilidad, liquidez y solvencia",
+    "Crecimiento Futuro": "Proyección de crecimiento a mediano/largo plazo basada en estimaciones",
+    "Cobertura": "Cobertura institucional detectada (fondos, ETFs, etc.)",
+    "Score Final": "Puntaje total (máx. 5) integrando fundamentales, técnicos y contexto",
+    "Target Alcista 12M": "Precio objetivo más optimista a 12 meses",
+    "Target Base 12M": "Precio objetivo promedio estimado a 12 meses",
+    "Target Conservador": "Escenario conservador a 12 meses",
+    "Proyección 12M (%)": "Proyección de retorno porcentual a 12 meses",
+    "% Subida a Máx": "Diferencia entre el precio actual y su máximo histórico",
+    "Beta": "Volatilidad respecto al mercado (mayor a 1 implica más riesgo)",
+    "País": "Mercado donde cotiza el activo",
+    "Recomendación": "Sugerencia final de inversión"
+}
 
-# Evitar error de Arrow al mostrar DataFrame con objetos complejos
-df_result_sin_hist = df_result.drop(columns=["Hist"], errors="ignore")
+st.dataframe(
+    df_result,
+    use_container_width=True,
+    column_config={k: st.column_config.TextColumn(k, help=v) for k, v in tooltips.items() if k in df_result.columns}
+)
 
-# Estilo visual (reaplicado sobre el nuevo df limpio)
-styler = df_result_sin_hist.style
-if "Semáforo Riesgo" in df_result_sin_hist.columns:
-    styler = styler.map(lambda val: resaltar(val, {
-        "VERDE": "#c8e6c9", "AMARILLO": "#fff9c4", "ROJO": "#ffcdd2"
-    }), subset=["Semáforo Riesgo"])
-if "Crecimiento Futuro" in df_result_sin_hist.columns:
-    styler = styler.map(lambda val: resaltar(val, {
-        "🟢 Alto": "#c8e6c9", "🟡 Moderado": "#fff9c4", "🔴 Bajo": "#ffcdd2"
-    }), subset=["Crecimiento Futuro"])
-if "Recomendación" in df_result_sin_hist.columns:
-    styler = styler.map(lambda val: resaltar(val, {
-        "✅ Comprar": "#c8e6c9", "👀 Revisar": "#fff9c4", "❌ Evitar": "#ffcdd2"
-    }), subset=["Recomendación"])
-
-# ✅ Mostrar sin error
-st.dataframe(styler, use_container_width=True)
-
-# Gráficos individuales
 if st.checkbox("📊 Mostrar gráficos individuales por activo analizado"):
     st.subheader("Gráficos por activo")
     for _, fila in df_result.iterrows():
@@ -222,21 +214,26 @@ if st.checkbox("📊 Mostrar gráficos individuales por activo analizado"):
         except Exception as e:
             st.warning(f"Error al graficar {fila['Ticker']}: {e}")
 
-# Mostrar errores
+st.subheader("📉 Métricas del Modelo de ML (Retorno 12M)")
+try:
+    with open("modelo_rmse.txt", "r") as f:
+        rmse_value = f.read().strip()
+        st.success(f"📈 RMSE del modelo: {rmse_value}")
+except Exception as e:
+    st.warning(f"No se pudo leer el RMSE: {e}")
+try:
+    st.image("modelo_histograma.png", caption="Distribución de errores del modelo (Predicción vs Real)", use_column_width=True)
+except Exception as e:
+    st.warning(f"No se pudo cargar el histograma de errores: {e}")
+
 if errores_conexion:
     st.warning("⚠️ Errores de conexión detectados:")
     for err in errores_conexion:
         st.text(err)
 
-# Guardar CSV limpio
 fecha_str = datetime.today().strftime("%Y-%m-%d")
 nombre_salida = f"AnalisisFinal-{fecha_str}_export.csv"
-df_result_sin_hist.to_csv(nombre_salida, index=False)
-csv = df_result_sin_hist.to_csv(index=False).encode('utf-8')
+df_result.to_csv(nombre_salida, index=False)
+csv = df_result.to_csv(index=False).encode('utf-8')
 
-# Logs
-if st.session_state.debug_logs:
-    with st.expander("🛠️ Logs de Depuración"):
-        st.text_area("Salida de depuración", "\n".join(st.session_state.debug_logs), height=300)
-
-st.download_button("📥 Descargar resultados en CSV", data=csv, file_name=nombre_salida)
+st.download_button("🗕️ Descargar resultados en CSV", data=csv, file_name=nombre_salida)

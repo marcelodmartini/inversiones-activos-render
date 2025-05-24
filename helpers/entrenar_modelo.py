@@ -16,7 +16,7 @@ ARCHIVO_SALIDA_MODELO = "modelo_retorno.pkl"
 ARCHIVO_SALIDA_RMSE = "modelo_rmse.txt"
 ARCHIVO_HISTOGRAMA = "modelo_histograma.png"
 MODELO_ACTIVO = "rf"  # "lr" para LinearRegression, "rf" para RandomForest
-MIN_FEATURES_REQUERIDOS = 12
+MIN_FEATURES_PERMISIVOS = 8  # umbral más flexible
 
 features_completos = [
     "Beta", "ROE", "ROIC", "PEG Ratio", "FCF Yield", "P/E Ratio", "P/B Ratio",
@@ -58,11 +58,11 @@ for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*-expor
             retorno_12m = (precio_12m - actual) / actual * 100
             fila_features = {col: fila.get(col) for col in features_completos if col in fila}
             completitud = sum(pd.notna(list(fila_features.values())))
-            if completitud >= MIN_FEATURES_REQUERIDOS:
+            if completitud >= MIN_FEATURES_PERMISIVOS:
                 fila_features["retorno_12m"] = retorno_12m
                 datos.append(fila_features)
             else:
-                print(f"🔸 {ticker} descartado por features incompletos ({completitud}/{len(features_completos)})")
+                print(f"🔸 {ticker} descartado (completitud muy baja: {completitud}/{len(features_completos)})")
     except Exception as e:
         print(f"⚠️ Error procesando {archivo}: {e}")
 
@@ -79,6 +79,12 @@ if faltantes:
 
 # Filtro extra: evitar valores negativos extremos en retorno objetivo
 df_modelo = df_modelo[df_modelo["retorno_12m"] > -100]
+
+# Imputación con la media
+for col in features_disponibles:
+    if df_modelo[col].isnull().any():
+        media_col = df_modelo[col].mean()
+        df_modelo[col] = df_modelo[col].fillna(media_col)
 
 # Entrenamiento
 X = df_modelo[features_disponibles]

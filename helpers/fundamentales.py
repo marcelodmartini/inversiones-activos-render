@@ -7,19 +7,18 @@ from helpers.score import es_bono_argentino, obtener_riesgo_pais, obtener_pais_t
 def obtener_info_fundamental(ticker):
     es_bono = es_bono_argentino(ticker)
     resultado = {
-        "Ticker": ticker,
+        "Ticker": ticker, "Tipo": "Bono" if es_bono else "Acción",
         "País": None, "PEG Ratio": None, "P/E Ratio": None, "P/B Ratio": None,
         "ROE": None, "ROIC": None, "FCF Yield": None, "Debt/Equity": None,
         "EV/EBITDA": None, "Dividend Yield": None, "Beta": None,
         "Revenue Growth YoY": None, "% Subida a Máx": None,
-        "Contexto": None, "Semáforo Riesgo": "ROJO", "Tipo": "Bono" if es_bono else "Acción",
+        "Contexto": None, "Semáforo Riesgo": "ROJO",
         "VIX": None, "Riesgo País": None
     }
 
+    # --- YFINANCE ---
     try:
-        tkr = yf.Ticker(ticker)
-        info = tkr.info if hasattr(tkr, "info") and isinstance(tkr.info, dict) else {}
-
+        info = yf.Ticker(ticker).info
         resultado.update({
             "País": info.get("country"),
             "PEG Ratio": info.get("pegRatio"),
@@ -35,54 +34,55 @@ def obtener_info_fundamental(ticker):
             "Contexto": info.get("longBusinessSummary")
         })
 
-        # Calcular PEG si no está
+        # Calcular PEG si falta y growth > 0
         if resultado["PEG Ratio"] is None:
             pe = info.get("trailingPE")
             growth = info.get("earningsQuarterlyGrowth") or info.get("earningsGrowth")
-            if pe and growth:
-                try:
-                    resultado["PEG Ratio"] = round(pe / (growth * 100), 2)
-                except Exception:
-                    pass
+            if isinstance(pe, (int, float)) and isinstance(growth, (int, float)) and growth > 0:
+                resultado["PEG Ratio"] = round(pe / (growth * 100), 2)
 
-        # Calcular FCF Yield si no está
+        # Calcular FCF Yield si falta
         if resultado["FCF Yield"] is None:
             fcf = info.get("freeCashflow")
-            market_cap = info.get("marketCap")
-            if fcf and market_cap and market_cap > 0:
-                resultado["FCF Yield"] = round(fcf / market_cap * 100, 2)
+            mc = info.get("marketCap")
+            if isinstance(fcf, (int, float)) and isinstance(mc, (int, float)) and mc > 0:
+                resultado["FCF Yield"] = round(fcf / mc * 100, 2)
 
         # Subida a máximo
         price = info.get("currentPrice")
         high = info.get("fiftyTwoWeekHigh")
-        if price and high and high > price:
+        if isinstance(price, (int, float)) and isinstance(high, (int, float)) and price > 0:
             resultado["% Subida a Máx"] = round((high - price) / price * 100, 2)
 
         # Semáforo por beta
-        beta = resultado["Beta"] or 0
-        resultado["Semáforo Riesgo"] = (
-            "VERDE" if beta <= 1 else
-            "AMARILLO" if beta <= 1.5 else
-            "ROJO"
-        )
+        beta = resultado.get("Beta")
+        if isinstance(beta, (int, float)):
+            resultado["Semáforo Riesgo"] = (
+                "VERDE" if beta <= 1 else
+                "AMARILLO" if beta <= 1.5 else "ROJO"
+            )
 
     except Exception as e:
         print(f"[yfinance] {ticker} -> {e}")
 
-    # FINNHUB
+    # --- FINNHUB ---
     try:
         if FINNHUB_API_KEY:
-            r = requests.get(f"https://finnhub.io/api/v1/stock/metric?symbol={ticker}&metric=all&token={FINNHUB_API_KEY}")
+            url = f"https://finnhub.io/api/v1/stock/metric?symbol={ticker}&metric=all&token={FINNHUB_API_KEY}"
+            r = requests.get(url)
             if r.ok:
                 data = r.json().get("metric", {})
-                resultado["FCF Yield"] = data.get("freeCashFlowYieldAnnual") or resultado["FCF Yield"]
+                fcf_yield = data.get("freeCashFlowYieldAnnual")
+                if isinstance(fcf_yield, (int, float)):
+                    resultado["FCF Yield"] = fcf_yield
     except Exception as e:
         print(f"[finnhub] {ticker} -> {e}")
 
-    # FMP
+    # --- FMP ---
     try:
         if FMP_API_KEY:
-            r = requests.get(f"https://financialmodelingprep.com/api/v3/key-metrics-ttm/{ticker}?apikey={FMP_API_KEY}")
+            url = f"https://financialmodelingprep.com/api/v3/key-metrics-ttm/{ticker}?apikey={FMP_API_KEY}"
+            r = requests.get(url)
             if r.ok and isinstance(r.json(), list) and r.json():
                 data = r.json()[0]
                 resultado.update({
@@ -96,40 +96,35 @@ def obtener_info_fundamental(ticker):
     except Exception as e:
         print(f"[fmp] {ticker} -> {e}")
 
-    # Traducción del contexto
-    if resultado.get("Contexto"):
-        try:
-            resultado["Contexto"] = GoogleTranslator(source='auto', target='es').translate(resultado["Contexto"])
-        except Exception as e:
-            print(f"[traducción] {ticker} -> {e}")
-
-    # VIX
+    # --- TRADUCCIÓN ---
     try:
-        vix = yf.Ticker("^VIX").history(period="1d")["Close"].iloc[-1]
+        if resultado.get("Contexto"):
+            resultado["Contexto"] = GoogleTranslator(source='auto', target='es').translate(resultado["Contexto"])
+    except Exception as e:
+        print(f"[traducción] {ticker} -> {e}")
+
+    # --- VIX ---
+    try:
+        vix = yf.Ticker("^VIX").history("1d")["Close"].iloc[-1]
         resultado["VIX"] = round(vix, 2)
     except Exception as e:
         print(f"[VIX] {ticker} -> {e}")
 
-    # Riesgo país dinámico
+    # --- RIESGO PAÍS ---
     try:
-        pais = obtener_pais_ticker(ticker)  # reemplaza el dict pais_por_ticker
+        pais = obtener_pais_ticker(ticker)
         resultado["País"] = pais
         resultado["Riesgo País"] = obtener_riesgo_pais(pais)
     except Exception as e:
         print(f"[Riesgo País] {ticker} -> {e}")
 
-    # Cobertura
-    if es_bono:
-        claves = ["Dividend Yield", "Beta", "P/B Ratio"]
-    else:
-        claves = [
-            "PEG Ratio", "P/E Ratio", "P/B Ratio", "ROE", "FCF Yield",
-            "Beta", "Revenue Growth YoY", "% Subida a Máx"
-        ]
-
+    # --- COBERTURA ---
+    claves = ["Dividend Yield", "Beta", "P/B Ratio"] if es_bono else [
+        "PEG Ratio", "P/E Ratio", "P/B Ratio", "ROE", "FCF Yield",
+        "Beta", "Revenue Growth YoY", "% Subida a Máx"
+    ]
     completos = sum(1 for k in claves if resultado.get(k) is not None)
     resultado["Cobertura"] = f"{completos}/{len(claves)}"
-
     if completos == 0:
         resultado["Advertencia"] = "⚠️ Solo precio disponible, sin métricas fundamentales"
 

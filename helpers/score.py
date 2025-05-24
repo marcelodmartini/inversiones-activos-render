@@ -17,7 +17,7 @@ riesgo_pais_por_pais = {
     "default": 400
 }
 
-# --- Mapeo países YF → TE
+# --- Mapeo países YF → TE ---
 mapa_paises_yf = {
     "united states": "usa", "united kingdom": "europe",
     "germany": "europe", "france": "europe", "italy": "europe",

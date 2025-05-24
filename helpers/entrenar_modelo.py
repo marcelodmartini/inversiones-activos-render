@@ -38,27 +38,38 @@ def obtener_precio_a_12m(ticker, fecha_base_str):
 # Cargar todos los CSV de historicos y generar dataset
 datos = []
 for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*-export.csv")):
-    fecha_base_str = os.path.basename(archivo).split("-")[1]
-    df = pd.read_csv(archivo)
-    for _, fila in df.iterrows():
-        if fila.get("Tipo") == "Bono":
-            continue
-        ticker = fila.get("Ticker")
-        actual = fila.get("Actual")
-        if pd.isna(ticker) or pd.isna(actual):
-            continue
-        precio_12m = obtener_precio_a_12m(ticker, fecha_base_str)
-        if precio_12m is None:
-            continue
-        retorno_12m = (precio_12m - actual) / actual * 100
-        fila_features = {col: fila.get(col) for col in features}
-        if all(pd.notna(v) for v in fila_features.values()):
-            fila_features["retorno_12m"] = retorno_12m
-            datos.append(fila_features)
+    try:
+        fecha_base_str = os.path.basename(archivo).split("-")[1]
+        df = pd.read_csv(archivo)
+        for _, fila in df.iterrows():
+            if fila.get("Tipo") == "Bono":
+                continue
+            ticker = fila.get("Ticker")
+            actual = fila.get("Actual")
+            if pd.isna(ticker) or pd.isna(actual):
+                continue
+            precio_12m = obtener_precio_a_12m(ticker, fecha_base_str)
+            if precio_12m is None:
+                continue
+            retorno_12m = (precio_12m - actual) / actual * 100
+            fila_features = {col: fila.get(col) for col in features if col in fila}
+            if all(pd.notna(v) for v in fila_features.values()) and len(fila_features) == len(features):
+                fila_features["retorno_12m"] = retorno_12m
+                datos.append(fila_features)
+    except Exception as e:
+        print(f"⚠️ Error procesando {archivo}: {e}")
 
 # Entrenamiento
 df_modelo = pd.DataFrame(datos)
-X = df_modelo[features]
+if df_modelo.empty:
+    raise ValueError("❌ No se pudo generar dataset de entrenamiento válido. Verificá los archivos en /historicos/")
+
+features_disponibles = [f for f in features if f in df_modelo.columns]
+faltantes = [f for f in features if f not in df_modelo.columns]
+if faltantes:
+    print(f"⚠️ Advertencia: Faltan columnas en el dataset y serán ignoradas: {faltantes}")
+
+X = df_modelo[features_disponibles]
 y = df_modelo["retorno_12m"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 

@@ -4,7 +4,11 @@ import re
 from datetime import datetime
 from pycoingecko import CoinGeckoAPI
 from helpers.graficos import graficar_precio_historico, graficar_radar_scores, graficar_subida_maximo
-from helpers.score import ticker_map, obtener_pais_ticker, es_bono_argentino, calcular_score, cargar_paises_te, agregar_proyecciones_forward, calcular_cagr_3y, analizar_volumen, guardar_score_historico
+from helpers.score import (
+    ticker_map, obtener_pais_ticker, es_bono_argentino, calcular_score,
+    cargar_paises_te, agregar_proyecciones_forward, calcular_cagr_3y,
+    analizar_volumen, guardar_score_historico, predecir_retorno_ml
+)
 from helpers.yahoo import analizar_con_yfinance
 from helpers.alphavantage import analizar_con_alphavantage
 from helpers.coingecko import analizar_con_coingecko
@@ -22,6 +26,14 @@ from pandas.io.formats.style import Styler
 
 log_info("La app inició correctamente")
 cargar_paises_te()
+st.set_page_config(page_title="Análisis Financiero IA", layout="wide")
+
+if st.sidebar.button("🔁 Reentrenar modelo manualmente"):
+    try:
+        subprocess.run(["python", "helpers/entrenar_modelo.py"], check=True)
+        st.sidebar.success("✅ Modelo reentrenado exitosamente.")
+    except Exception as e:
+        st.sidebar.error(f"❌ Error al reentrenar el modelo: {e}")
 
 try:
     subprocess.run(["python", "helpers/entrenar_modelo.py"], check=True)
@@ -29,7 +41,7 @@ try:
 except Exception as e:
     log_error(f"Error al reentrenar el modelo automáticamente: {e}")
 
-def obtener_csv_mas_reciente(patron="AnalisisFinal-*-export.csv"):
+def obtener_csv_mas_reciente(patron="historicos/AnalisisFinal-*-export.csv"):
     archivos = glob.glob(patron)
     return sorted(archivos, key=os.path.getmtime, reverse=True)[0] if archivos else None
 
@@ -158,6 +170,9 @@ with st.spinner("Analizando activos..."):
             if k not in resultado or resultado[k] is None:
                 resultado[k] = v
 
+        if "Tipo" not in resultado or resultado["Tipo"] == "Desconocido":
+            resultado["Tipo"] = "Bono" if es_bono else "Acción"
+
         score_texto, score_numerico = calcular_score(resultado)
         resultado["Score Final"] = score_texto
         resultado["__orden_score"] = score_numerico
@@ -167,7 +182,7 @@ df_result = pd.DataFrame(resultados)
 df_result = df_result.sort_values("__orden_score", ascending=False).drop(columns="__orden_score")
 
 def recomendar(score_texto, crecimiento):
-    match = re.search(r"(\d+)/5", str(score_texto))
+    match = re.search(r"(\\d+)/5", str(score_texto))
     score_valor = int(match.group(1)) if match else 0
     if score_valor >= 4:
         return "✅ Comprar"
@@ -180,18 +195,15 @@ guardar_score_historico(df_result)
 
 tooltips = {
     "Ticker": "Símbolo del activo",
-    "Semáforo Riesgo": "Nivel de riesgo basado en la volatilidad, liquidez y solvencia",
-    "Crecimiento Futuro": "Proyección de crecimiento a mediano/largo plazo basada en estimaciones",
-    "Cobertura": "Cobertura institucional detectada (fondos, ETFs, etc.)",
     "Score Final": "Puntaje total (máx. 5) integrando fundamentales, técnicos y contexto",
-    "Target Alcista 12M": "Precio objetivo más optimista a 12 meses",
-    "Target Base 12M": "Precio objetivo promedio estimado a 12 meses",
-    "Target Conservador": "Escenario conservador a 12 meses",
-    "Proyección 12M (%)": "Proyección de retorno porcentual a 12 meses",
-    "% Subida a Máx": "Diferencia entre el precio actual y su máximo histórico",
-    "Beta": "Volatilidad respecto al mercado (mayor a 1 implica más riesgo)",
-    "País": "Mercado donde cotiza el activo",
-    "Recomendación": "Sugerencia final de inversión"
+    "Crecimiento Futuro": "Proyección de crecimiento basada en estimaciones Forward",
+    "Target Base 12M": "Precio objetivo base estimado en 12 meses",
+    "Target Alcista 12M": "Escenario optimista a 12 meses",
+    "Target Conservador": "Escenario pesimista a 12 meses",
+    "Proyección 12M (%)": "Proyección estimada de retorno a 12 meses",
+    "% Subida a Máx": "Potencial de revalorización al máximo anterior",
+    "Beta": "Volatilidad respecto al mercado",
+    "Recomendación": "Sugerencia basada en el análisis integral"
 }
 
 st.dataframe(
@@ -199,6 +211,37 @@ st.dataframe(
     use_container_width=True,
     column_config={k: st.column_config.TextColumn(k, help=v) for k, v in tooltips.items() if k in df_result.columns}
 )
+
+# Simulador de inversión para el mejor activo
+top1 = df_result.iloc[0]
+st.subheader("💰 Simulación de Inversión 12M en el Mejor Activo")
+if st.button(f"Simular inversión en {top1['Ticker']}"):
+    monto = st.number_input("Ingresá el monto a invertir (USD)", value=1000.0, min_value=10.0, step=100.0)
+    proy = top1.get("Proyección 12M (%)", 0)
+    if pd.notna(proy):
+        ganancia = monto * (proy / 100)
+        total = monto + ganancia
+        st.success(f"🔄 Proyección: {proy:.2f}%")
+        st.info(f"📈 Valor estimado en 12 meses: USD {total:,.2f} (ganancia: USD {ganancia:,.2f})")
+
+        # Guardar simulación
+        sim_path = "historicos/simulaciones_inversion.csv"
+        os.makedirs("historicos", exist_ok=True)
+        sim_data = pd.DataFrame([{
+            "Fecha": datetime.today().strftime("%Y-%m-%d"),
+            "Ticker": top1['Ticker'],
+            "Monto": monto,
+            "Proyección 12M (%)": proy,
+            "Valor Estimado": total,
+            "Ganancia Estimada": ganancia
+        }])
+        if os.path.exists(sim_path):
+            sim_data.to_csv(sim_path, mode="a", index=False, header=False)
+        else:
+            sim_data.to_csv(sim_path, index=False)
+        st.success("💾 Simulación guardada en `historicos/simulaciones_inversion.csv`")
+    else:
+        st.warning("⚠️ Este activo no tiene proyección de retorno disponible.")
 
 if st.checkbox("📊 Mostrar gráficos individuales por activo analizado"):
     st.subheader("Gráficos por activo")
@@ -226,14 +269,22 @@ try:
 except Exception as e:
     st.warning(f"No se pudo cargar el histograma de errores: {e}")
 
+# Mostrar historial de simulaciones
+sim_path = "historicos/simulaciones_inversion.csv"
+if os.path.exists(sim_path):
+    st.subheader("📂 Historial de Simulaciones")
+    df_sims = pd.read_csv(sim_path)
+    st.dataframe(df_sims, use_container_width=True)
+    st.download_button("⬇️ Descargar historial de simulaciones", data=df_sims.to_csv(index=False).encode("utf-8"), file_name="simulaciones_inversion.csv")
+
 if errores_conexion:
     st.warning("⚠️ Errores de conexión detectados:")
     for err in errores_conexion:
         st.text(err)
 
+# Exportación CSV
 fecha_str = datetime.today().strftime("%Y-%m-%d")
 nombre_salida = f"AnalisisFinal-{fecha_str}_export.csv"
 df_result.to_csv(nombre_salida, index=False)
 csv = df_result.to_csv(index=False).encode('utf-8')
-
 st.download_button("🗕️ Descargar resultados en CSV", data=csv, file_name=nombre_salida)

@@ -184,6 +184,15 @@ with st.spinner("Analizando activos..."):
 df_result = pd.DataFrame(resultados)
 df_result = df_result.sort_values("__orden_score", ascending=False).drop(columns="__orden_score")
 
+# Reordenar columnas prioritarias
+columnas_prioritarias = [
+    "Ticker", "Score Final", "Recomendación", "% Subida a Máx", "Crecimiento Futuro",
+    "País", "Semáforo Riesgo", "Contexto Global", "Proyección 12M (%)", "Score Numérico Total"
+]
+columnas_restantes = [col for col in df_result.columns if col not in columnas_prioritarias]
+df_result = df_result[columnas_prioritarias + columnas_restantes]
+
+
 def recomendar(score_texto, crecimiento):
     match = re.search(r"(\\d+)/5", str(score_texto))
     score_valor = int(match.group(1)) if match else 0

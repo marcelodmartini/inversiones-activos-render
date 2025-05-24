@@ -28,6 +28,19 @@ log_info("La app inició correctamente")
 cargar_paises_te()
 st.set_page_config(page_title="Análisis Financiero IA", layout="wide")
 
+def recomendar(score_texto, crecimiento):
+    match = re.search(r"(\\d+)/5", str(score_texto))
+    score_valor = int(match.group(1)) if match else 0
+    if score_valor >= 4:
+        return "✅ Comprar"
+    elif score_valor == 3 and crecimiento in ["🟢 Alto", "🟡 Moderado"]:
+        return "🙀 Revisar"
+    return "❌ Evitar"
+
+def obtener_csv_mas_reciente(patron="historicos/AnalisisFinal-*-export.csv"):
+    archivos = glob.glob(patron)
+    return sorted(archivos, key=os.path.getmtime, reverse=True)[0] if archivos else None
+
 if st.sidebar.button("🔁 Reentrenar modelo manualmente"):
     try:
         subprocess.run(["python", "helpers/entrenar_modelo.py"], check=True)
@@ -40,10 +53,6 @@ try:
     log_info("Modelo reentrenado automáticamente")
 except Exception as e:
     log_error(f"Error al reentrenar el modelo automáticamente: {e}")
-
-def obtener_csv_mas_reciente(patron="historicos/AnalisisFinal-*-export.csv"):
-    archivos = glob.glob(patron)
-    return sorted(archivos, key=os.path.getmtime, reverse=True)[0] if archivos else None
 
 if "debug_logs" not in st.session_state:
     st.session_state.debug_logs = []
@@ -99,6 +108,7 @@ if st.button("Consultar IA") and prompt.strip():
             st.write(response.choices[0].message.content)
         except Exception as e:
             st.error(f"Error al contactar a OpenAI: {e}")
+
 
 cg = CoinGeckoAPI()
 errores_conexion, resultados = [], []

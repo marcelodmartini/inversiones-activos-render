@@ -17,7 +17,7 @@ ARCHIVO_SALIDA_RMSE = "modelo_rmse.txt"
 ARCHIVO_HISTOGRAMA = "modelo_histograma.png"
 MODELO_ACTIVO = "rf"  # "lr" para LinearRegression, "rf" para RandomForest
 
-features = [
+features_completos = [
     "Beta", "ROE", "ROIC", "PEG Ratio", "FCF Yield", "P/E Ratio", "P/B Ratio",
     "Dividend Yield", "Debt/Equity", "EV/EBITDA", "Forward EPS",
     "Forward Revenue Growth", "Margen Futuro", "Score Numérico Total"
@@ -52,8 +52,8 @@ for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*-expor
             if precio_12m is None:
                 continue
             retorno_12m = (precio_12m - actual) / actual * 100
-            fila_features = {col: fila.get(col) for col in features if col in fila}
-            if all(pd.notna(v) for v in fila_features.values()) and len(fila_features) == len(features):
+            fila_features = {col: fila.get(col) for col in features_completos if col in fila}
+            if all(pd.notna(v) for v in fila_features.values()):
                 fila_features["retorno_12m"] = retorno_12m
                 datos.append(fila_features)
     except Exception as e:
@@ -64,10 +64,10 @@ df_modelo = pd.DataFrame(datos)
 if df_modelo.empty:
     raise ValueError("❌ No se pudo generar dataset de entrenamiento válido. Verificá los archivos en /historicos/")
 
-features_disponibles = [f for f in features if f in df_modelo.columns]
-faltantes = [f for f in features if f not in df_modelo.columns]
+features_disponibles = [f for f in features_completos if f in df_modelo.columns]
+faltantes = [f for f in features_completos if f not in df_modelo.columns]
 if faltantes:
-    print(f"⚠️ Advertencia: Faltan columnas en el dataset y serán ignoradas: {faltantes}")
+    print(f"⚠️ Advertencia: Faltan columnas y se entrenará con menos features: {faltantes}")
 
 X = df_modelo[features_disponibles]
 y = df_modelo["retorno_12m"]

@@ -9,13 +9,64 @@ import joblib
 from datetime import datetime
 from config import TRADINGECONOMICS_API_KEY
 
-# --- Fallback por país ---
+# --- Fallback por país (actualizado al 23/05/2025) ---
 riesgo_pais_por_pais = {
-    "argentina": 1450, "brazil": 260, "mexico": 320,
-    "chile": 170, "colombia": 370, "usa": 50,
-    "china": 70, "india": 90, "europe": 80,
+    # América Latina
+    "argentina": 579,
+    "bolivia": 2111,
+    "brasil": 234,
+    "chile": 122,
+    "colombia": 327,
+    "costa rica": 201,
+    "ecuador": 1061,
+    "el salvador": 400,
+    "guatemala": 208,
+    "honduras": 411,
+    "méxico": 320,
+    "panamá": 295,
+    "paraguay": 168,
+    "perú": 157,
+    "república dominicana": 213,
+    "uruguay": 92,
+    "venezuela": 23459,
+
+    # América del Norte
+    "canadá": 78,
+    "estados unidos": 193,
+
+    # Europa
+    "alemania": -193,
+    "austria": 40,
+    "bélgica": 54,
+    "dinamarca": -23,
+    "españa": 63,
+    "finlandia": 46,
+    "francia": 70,
+    "grecia": 75,
+    "irlanda": 33,
+    "italia": 102,
+    "países bajos": 22,
+    "portugal": 53,
+    "reino unido": 210,
+    "suecia": -20,
+    "suiza": -221,
+
+    # Asia
+    "china": -85,
+    "india": 364,
+    "japón": -104,
+
+    # Oceanía
+    "australia": 188,
+    "nueva zelanda": 209,
+
+    # África
+    "sudáfrica": 400,  # Estimación basada en datos históricos
+
+    # Default
     "default": 400
 }
+
 
 # --- Mapeo países YF → TE ---
 mapa_paises_yf = {

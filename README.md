@@ -37,7 +37,51 @@ Este `README.md` explica en detalle el funcionamiento de la aplicación Streamli
 | **Target Conservador**       | Precio objetivo pesimista, usando Forward EPS × PER 12.                            |
 | **Proyección 12M (%)**       | Potencial de subida estimado: (Target Base - Actual) / Actual.                     |
 | **Retorno 12M ML (%)**       | Predicción del modelo ML para el retorno esperado a 12 meses.                      |
-| **Recomendación**            | Sugerencia final: ✅ Comprar, 🙀 Revisar, ❌ Evitar.                                 |
+| **Recomendación**            | Sugerencia final: ✅ Comprar, 🙀 Revisar, ❌ Evitar.                                |
+
+---
+
+## 🧠 Cómo funciona el modelo de predicción y cálculo de Score
+
+Esta aplicación integra análisis fundamental, técnico y proyecciones de Machine Learning para ofrecer una evaluación completa de activos financieros. A continuación se detalla cómo se calculan las métricas más importantes:
+
+### 🔍 Datos históricos
+
+Los datos provienen de archivos `.csv` ubicados en la carpeta `/historicos/`, con nombre tipo `AnalisisFinal-YYYYMMDD_export.csv`. Cada archivo contiene:
+
+* Indicadores fundamentales y técnicos de activos (acciones, CEDEARs, criptomonedas).
+* Datos extraídos de Yahoo Finance, CoinGecko, AlphaVantage, etc.
+* Precio actual (`Actual`) y fecha base para calcular retorno a 12 meses.
+
+---
+
+### 📊 Modelo de predicción: `modelo_retorno.pkl`
+
+Entrenado con `RandomForestRegressor` usando datos históricos. El modelo aprende a predecir el retorno a 12 meses de un activo en función de sus indicadores.
+
+* **Entrenamiento:** se genera automáticamente desde `helpers/entrenar_modelo.py`
+* **Inputs del modelo (features):**
+
+  * `Beta`, `ROE`, `ROIC`, `PEG Ratio`, `FCF Yield`, `P/E Ratio`, `P/B Ratio`
+  * `Dividend Yield`, `Debt/Equity`, `EV/EBITDA`, `Forward EPS`
+  * `Forward Revenue Growth`, `Margen Futuro`, `Score Numérico Total`
+* **Output (target):**
+
+  * `retorno_12m = ((precio_12m - precio_actual) / precio_actual) × 100`
+
+---
+
+### 📈 Cálculo del Score y proyecciones
+
+| Columna                | Descripción                                                           |
+| ---------------------- | --------------------------------------------------------------------- |
+| `Proyección 12M`       | Retorno estimado a 12 meses según `modelo_retorno.pkl`                |
+| `Retorno 12M ML`       | Sinónimo de Proyección 12M, calculado con ML                          |
+| `Score Final`          | Puntaje de 1 a 5 estrellas basado en métricas clave                   |
+| `Score Numérico Total` | Suma de condiciones cumplidas (fundamentales, técnicas, proyecciones) |
+| `Justificación Score`  | Lista textual de métricas que aportaron puntos al score               |
+| `Semáforo Riesgo`      | Indicador de riesgo basado en `Beta`: 🟢 Bajo, 🟡 Medio, 🔴 Alto      |
+| `Advertencia`          | Mensajes automáticos si hay riesgo alto, deuda elevada o EPS negativo |
 
 ---
 

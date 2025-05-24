@@ -213,13 +213,13 @@ tooltips = {
     "Recomendación": "Sugerencia basada en el análisis integral"
 }
 
-if 'Hist' in df_result.columns:
-    df_result = df_result.drop(columns=['Hist'])
+df_para_tabla = df_result.drop(columns=['Hist']) if 'Hist' in df_result.columns else df_result
+
 
 st.dataframe(
-    df_result,
+    df_para_tabla,
     use_container_width=True,
-    column_config={k: st.column_config.TextColumn(k, help=v) for k, v in tooltips.items() if k in df_result.columns}
+    column_config={k: st.column_config.TextColumn(k, help=v) for k, v in tooltips.items() if k in df_para_tabla.columns}
 )
 
 # Simulador de inversión para el mejor activo

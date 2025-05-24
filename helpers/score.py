@@ -182,14 +182,26 @@ def calcular_bollinger(df, window=20):
 # --- Contexto y país ---
 def cargar_paises_te():
     global paises_disponibles_te
+    paises_disponibles_te = set()
     try:
+        print("[INFO] Iniciando sesión en TradingEconomics...")
         te.login(TRADINGECONOMICS_API_KEY)
+
         url = f"https://api.tradingeconomics.com/country?c={TRADINGECONOMICS_API_KEY}"
-        r = requests.get(url)
-        if r.status_code == 200:
-            paises_disponibles_te = {p["country"].lower() for p in r.json()}
-    except:
-        paises_disponibles_te = set()
+        response = requests.get(url)
+
+        if response.status_code == 200:
+            data = response.json()
+            if isinstance(data, list) and all("country" in p for p in data):
+                paises_disponibles_te = {p["country"].lower() for p in data}
+                print(f"[INFO] Países disponibles cargados desde TradingEconomics: {len(paises_disponibles_te)}")
+            else:
+                print("[WARN] Respuesta inválida al cargar países desde TradingEconomics.")
+        else:
+            print(f"[ERROR] Fallo al obtener países desde TradingEconomics. Código: {response.status_code}")
+    except Exception as e:
+        print(f"[ERROR] Excepción al cargar países desde TradingEconomics: {e}")
+
 
 def obtener_pais_ticker(ticker):
     ticker_ = ticker_map.get(ticker.upper(), ticker.upper())
@@ -201,26 +213,48 @@ def obtener_pais_ticker(ticker):
         return "default"
 
 def obtener_riesgo_pais(pais):
+    pais = pais.lower()
+
+    # Asegurar que los países estén cargados
     if not paises_disponibles_te:
         cargar_paises_te()
-    pais = pais.lower()
+
+    # Verificación de disponibilidad
     if pais not in paises_disponibles_te:
         print(f"[INFO] {pais} no disponible en TradingEconomics. Usando fallback.")
         return riesgo_pais_por_pais.get(pais, riesgo_pais_por_pais["default"])
+
+    # Intentar obtener datos del indicador
     try:
         df = te.getIndicatorData(country=pais, output_type="df")
-        print(f"[DEBUG] Indicadores para {pais}:")
-        print(df[["Category", "Value"]].head(10))  # Verifica qué trae
-        df = df[df["Category"].str.lower().str.contains("risk|embi")]
-        if not df.empty:
-            valor = round(float(df.iloc[0]["Value"]))
-            print(f"[INFO] Riesgo país actualizado para {pais}: {valor}")
-            return valor
+
+        if df.empty:
+            print(f"[WARN] DataFrame vacío para {pais} desde TradingEconomics.")
+            return riesgo_pais_por_pais.get(pais, riesgo_pais_por_pais["default"])
+
+        # Mostrar primeros indicadores para debug
+        print(f"[DEBUG] Indicadores disponibles para {pais}:")
+        print(df[["Category", "Value"]].head(10))
+
+        # Buscar por categorías relevantes
+        df_riesgo = df[df["Category"].str.lower().str.contains("risk|embi|bond")]
+        if not df_riesgo.empty:
+            valor = df_riesgo.iloc[0]["Value"]
+            if pd.notna(valor):
+                valor = round(float(valor))
+                print(f"[INFO] Riesgo país actualizado para {pais}: {valor}")
+                return valor
+            else:
+                print(f"[WARN] Valor nulo para riesgo país de {pais}. Usando fallback.")
         else:
-            print(f"[WARN] No se encontró riesgo país actualizado para {pais}, usando fallback.")
+            print(f"[WARN] No se encontró categoría 'risk|embi|bond' para {pais}. Usando fallback.")
+
     except Exception as e:
         print(f"[ERROR] Fallo al consultar riesgo país para {pais}: {e}")
+
+    # Fallback final
     return riesgo_pais_por_pais.get(pais, riesgo_pais_por_pais["default"])
+
 
 
 sectores_ciclicos = ["consumer discretionary", "financial", "industrials", "real estate"]

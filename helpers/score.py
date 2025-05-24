@@ -154,15 +154,23 @@ def obtener_riesgo_pais(pais):
         cargar_paises_te()
     pais = pais.lower()
     if pais not in paises_disponibles_te:
+        print(f"[INFO] {pais} no disponible en TradingEconomics. Usando fallback.")
         return riesgo_pais_por_pais.get(pais, riesgo_pais_por_pais["default"])
     try:
         df = te.getIndicatorData(country=pais, output_type="df")
-        df = df[df["Category"].str.lower().str.contains("bond|risk")]
+        print(f"[DEBUG] Indicadores para {pais}:")
+        print(df[["Category", "Value"]].head(10))  # Verifica qué trae
+        df = df[df["Category"].str.lower().str.contains("risk|embi")]
         if not df.empty:
-            return round(float(df.iloc[0]["Value"]))
-    except:
-        pass
+            valor = round(float(df.iloc[0]["Value"]))
+            print(f"[INFO] Riesgo país actualizado para {pais}: {valor}")
+            return valor
+        else:
+            print(f"[WARN] No se encontró riesgo país actualizado para {pais}, usando fallback.")
+    except Exception as e:
+        print(f"[ERROR] Fallo al consultar riesgo país para {pais}: {e}")
     return riesgo_pais_por_pais.get(pais, riesgo_pais_por_pais["default"])
+
 
 sectores_ciclicos = ["consumer discretionary", "financial", "industrials", "real estate"]
 riesgos_regulatorios = {

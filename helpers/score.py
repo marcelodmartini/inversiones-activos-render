@@ -250,6 +250,7 @@ def calcular_score(resultado):
     score = 0
     ticker = resultado.get("Ticker", "")
     justificaciones = []
+
     # Métricas financieras
     if (b := resultado.get("Beta")) is not None and b <= 1:
         score += 1
@@ -288,6 +289,7 @@ def calcular_score(resultado):
     if (rev := resultado.get("Revenue Growth YoY")) and rev > 15:
         score += 1
         justificaciones.append("Crecimiento histórico > 15%")
+
     # Proyecciones futuras
     if (eps_fwd := resultado.get("Forward EPS")):
         if eps_fwd > 0: score += 1; justificaciones.append("EPS futuro positivo")
@@ -298,7 +300,8 @@ def calcular_score(resultado):
     if (margen := resultado.get("Margen Futuro")) and margen > 0.15:
         score += 1
         justificaciones.append("Margen futuro saludable")
-    # Técnicos
+
+    # Técnicos (sin cambios)
     try:
         hist = resultado.get("Hist")
         if isinstance(hist, dict):
@@ -317,6 +320,7 @@ def calcular_score(resultado):
             if precio < df["Bollinger Lower"].iloc[-1]: score += 1; justificaciones.append("En banda inferior Bollinger")
     except:
         pass
+
     # Penalizaciones
     if (pe := resultado.get("P/E Ratio")) and pe > 60:
         score -= 1
@@ -324,23 +328,28 @@ def calcular_score(resultado):
     if (roe := resultado.get("ROE")) and roe < 0:
         score -= 1
         justificaciones.append("ROE negativo")
+
     # Sector estratégico
-    sector = resultado.get("Sector", "").lower()
+    sector = str(resultado.get("Sector") or "").lower()
     if any(x in sector for x in ["ai", "inteligencia", "energ", "defens", "cloud", "infra", "semic", "space", "uran", "aero"]):
         score += 1
         justificaciones.append("Sector estratégico")
+
     # Penalización por ciclo macro-sectorial o riesgo regulatorio
-    pais = obtener_pais_ticker(ticker)        
+    pais = obtener_pais_ticker(ticker)
     penal = penalizacion_sectorial(pais, sector)
     score += penal
     if penal < 0:
         justificaciones.append(f"Penalización sectorial por {pais}/{sector} ({penal})")
+
     # Contexto
     contexto, bonus = obtener_contexto_mundial(ticker)
     resultado["Contexto Global"] = contexto
     score += bonus
-    if bonus > 0: justificaciones.append(f"Contexto global favorable (+{bonus})")
-    # --- NUEVO: Cálculo de proyecciones de precio objetivo ---
+    if bonus > 0:
+        justificaciones.append(f"Contexto global favorable (+{bonus})")
+
+    # Precio objetivo
     try:
         actual = resultado.get("Actual")
         eps_fwd = resultado.get("Forward EPS")

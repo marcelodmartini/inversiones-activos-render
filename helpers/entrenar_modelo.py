@@ -2,6 +2,7 @@ import pandas as pd
 import yfinance as yf
 import glob
 import os
+import re
 from datetime import datetime, timedelta
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import LinearRegression
@@ -9,8 +10,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 import joblib
 import matplotlib.pyplot as plt
+import logging
 
 # Configuración
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 CARPETA_HISTORICOS = os.path.join(os.path.dirname(__file__), "..", "historicos")
 ARCHIVO_SALIDA_MODELO = "modelo_retorno.pkl"
 ARCHIVO_SALIDA_RMSE = "modelo_rmse.txt"
@@ -33,14 +37,20 @@ def obtener_precio_a_12m(ticker, fecha_base_str):
             end=(fecha_12m + timedelta(days=5)).strftime("%Y-%m-%d")
         )
         return df['Close'].iloc[0] if not df.empty else None
-    except:
+    except Exception as e:
+        logging.warning(f"Error obteniendo precio para {ticker} a 12M: {e}")
         return None
 
 # Cargar todos los CSV de historicos y generar dataset
 datos = []
 for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*-export.csv")):
     try:
-        fecha_base_str = os.path.basename(archivo).split("-")[1]
+        match = re.search(r"AnalisisFinal-(\d{4}-\d{2}-\d{2})", os.path.basename(archivo))
+        if not match:
+            logging.warning(f"No se pudo extraer fecha de {archivo}")
+            continue
+        fecha_base_str = match.group(1)
+
         df = pd.read_csv(archivo)
         for _, fila in df.iterrows():
             if fila.get("Tipo") == "Bono":
@@ -58,7 +68,7 @@ for archivo in glob.glob(os.path.join(CARPETA_HISTORICOS, "AnalisisFinal-*-expor
                 fila_features["retorno_12m"] = retorno_12m
                 datos.append(fila_features)
     except Exception as e:
-        print(f"⚠️ Error procesando {archivo}: {e}")
+        logging.warning(f"Error procesando {archivo}: {e}")
 
 # Entrenamiento
 df_modelo = pd.DataFrame(datos)
@@ -67,8 +77,10 @@ if df_modelo.empty:
 
 features_disponibles = [f for f in features_completos if f in df_modelo.columns]
 faltantes = [f for f in features_completos if f not in df_modelo.columns]
+if len(features_disponibles) < MIN_FEATURES_REQUERIDOS:
+    logging.warning(f"Solo {len(features_disponibles)} features disponibles (mínimo recomendado: {MIN_FEATURES_REQUERIDOS})")
 if faltantes:
-    print(f"⚠️ Advertencia: Faltan columnas y se entrenará con menos features: {faltantes}")
+    logging.info(f"Faltan columnas: {faltantes}")
 
 df_modelo = df_modelo.dropna(subset=features_disponibles + ["retorno_12m"])
 X = df_modelo[features_disponibles]
@@ -77,18 +89,18 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 
 if MODELO_ACTIVO == "rf":
     modelo = RandomForestRegressor(n_estimators=100, random_state=42)
-    print("🔍 Usando modelo: RandomForestRegressor")
+    logging.info("Usando modelo: RandomForestRegressor")
 else:
     modelo = LinearRegression()
-    print("🔍 Usando modelo: LinearRegression")
+    logging.info("Usando modelo: LinearRegression")
 
 modelo.fit(X_train, y_train)
 y_pred = modelo.predict(X_test)
 rmse = mean_squared_error(y_test, y_pred, squared=False)
-print(f"✅ Modelo entrenado. RMSE: {rmse:.2f}")
+logging.info(f"✅ Modelo entrenado. RMSE: {rmse:.2f}")
 
 joblib.dump(modelo, ARCHIVO_SALIDA_MODELO)
-print(f"📁 Modelo guardado en: {ARCHIVO_SALIDA_MODELO}")
+logging.info(f"📁 Modelo guardado en: {ARCHIVO_SALIDA_MODELO}")
 
 # Guardar RMSE
 with open(ARCHIVO_SALIDA_RMSE, "w") as f:
@@ -104,4 +116,7 @@ plt.ylabel("Frecuencia")
 plt.grid(True)
 plt.tight_layout()
 plt.savefig(ARCHIVO_HISTOGRAMA)
-print(f"📊 Histograma guardado en: {ARCHIVO_HISTOGRAMA}")
+logging.info(f"📊 Histograma guardado en: {ARCHIVO_HISTOGRAMA}")
+
+if __name__ == "__main__":
+    plt.show()

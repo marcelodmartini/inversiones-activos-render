@@ -104,6 +104,15 @@ cg = CoinGeckoAPI()
 errores_conexion, resultados = [], []
 criptos_disponibles = [c['id'] for c in cg.get_coins_list()]
 
+def recomendar(score_texto, crecimiento):
+    match = re.search(r"(\\d+)/5", str(score_texto))
+    score_valor = int(match.group(1)) if match else 0
+    if score_valor >= 4:
+        return "✅ Comprar"
+    elif score_valor == 3 and crecimiento in ["🟢 Alto", "🟡 Moderado"]:
+        return "🙀 Revisar"
+    return "❌ Evitar"
+
 with st.spinner("Analizando activos..."):
     for raw_ticker in df_input['Ticker']:
         if pd.isna(raw_ticker) or not str(raw_ticker).strip():
@@ -183,8 +192,8 @@ with st.spinner("Analizando activos..."):
 
 df_result = pd.DataFrame(resultados)
 df_result = df_result.sort_values("__orden_score", ascending=False).drop(columns="__orden_score")
+df_result["Recomendación"] = df_result.apply(lambda row: recomendar(row["Score Final"], row.get("Crecimiento Futuro", "")), axis=1)
 
-# Reordenar columnas prioritarias
 columnas_prioritarias = [
     "Ticker", "Score Final", "Recomendación", "% Subida a Máx", "Crecimiento Futuro",
     "País", "Semáforo Riesgo", "Contexto Global", "Proyección 12M (%)", "Score Numérico Total"
@@ -192,17 +201,6 @@ columnas_prioritarias = [
 columnas_restantes = [col for col in df_result.columns if col not in columnas_prioritarias]
 df_result = df_result[columnas_prioritarias + columnas_restantes]
 
-
-def recomendar(score_texto, crecimiento):
-    match = re.search(r"(\\d+)/5", str(score_texto))
-    score_valor = int(match.group(1)) if match else 0
-    if score_valor >= 4:
-        return "✅ Comprar"
-    elif score_valor == 3 and crecimiento in ["🟢 Alto", "🟡 Moderado"]:
-        return "🙀 Revisar"
-    return "❌ Evitar"
-
-df_result["Recomendación"] = df_result.apply(lambda row: recomendar(row["Score Final"], row.get("Crecimiento Futuro", "")), axis=1)
 guardar_score_historico(df_result)
 
 tooltips = {
